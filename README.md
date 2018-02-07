@@ -12,7 +12,9 @@ See the examples, and feel free to submit PR's with new examples.
 
 ## Basic Use
 
-The source code is well documented.
+The source code is well documented with several feature methods.
+
+The following would go in a file called `build.js`.
 
 ```js
 const ProductionLine = require('productionline')
@@ -40,6 +42,19 @@ switch (process.argv[2]) {
 
 builder.run()
 ```
+
+In the `package.json` file, add an npm command like:
+
+```js
+{
+  "scripts": {
+    "test": "...",
+    "build": "node build.js --build"
+  }
+}
+```
+
+The build process can then be run using `npm run build`.
 
 ## Extending the Production Line
 
