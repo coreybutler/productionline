@@ -11,11 +11,11 @@ class Builder {
   constructor () {
     this.tasks = new TaskRunner()
 
-    const pkg = require(path.join(process.cwd(), 'package.json'))
+    this.PKG = require(path.join(process.cwd(), 'package.json'))
 
     // Metadata
     this.APPVERSION = pkg.version
-    this.HEADER = `Copyright (c) ${(new Date()).getFullYear()} ${pkg.author}. All Rights Reserved.\nVersion ${pkg.version} built on ${new Date().toDateString()}.`
+    this.HEADER = `Copyright (c) ${(new Date()).getFullYear()} ${this.PKG.author}. All Rights Reserved.\nVersion ${this.PKG.version} built on ${new Date().toDateString()}.`
     this.FOOTER = null
 
     // Filepaths
@@ -34,6 +34,10 @@ class Builder {
 
       return out.join(' ')
     }
+  }
+
+  get package () {
+    return this.PKG
   }
 
   get version () {
