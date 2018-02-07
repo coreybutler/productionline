@@ -24,6 +24,24 @@ class Builder {
     this.ASSETS = [
       './assets'
     ]
+    this.IGNOREDLIST = [
+      'node_modules/**/*'
+    ]
+
+    // Find .gitignore and .buildignore. Add them to the ignored list.
+    this.IGNOREDLIST = this.IGNOREDLIST.concat(
+      (fs.readFileSync(path.join(__dirname, './.gitignore')).toString()
+      + fs.readFileSync(path.join(__dirname, './.buildignore')).toString())
+      .replace(/\#.*/gi, '')
+      .split(require('os').EOL)
+      .filter(glob => {
+        if (glob.trim().charAt(0) === '!') {
+          return false
+        }
+
+        return glob.trim().length > 0
+      })
+    )
 
     this.joinArguments = args => {
       let out = []
@@ -95,6 +113,33 @@ class Builder {
   }
 
   /**
+   * Set the list of paths to ignore (supports glob patterns).
+   * If you only want to add to the list, use #ignorePath instead.
+   * By default, `node_modules` is ignored, as well as anything
+   * in the ``.gitignore` file (if it exists) or a `.buildignore`
+   * file (if it exists).
+   * @param  {Array} paths
+   * An array of paths to ignore in the build process.
+   */
+  set ignore (value) {
+    this.IGNOREDLIST = value
+  }
+
+  /**
+   * This adds directories and/or files to the list of ignored files,
+   * where as setting the ignore property overrides the whole list.
+   * @param  {String|Array} paths
+   * The path(s) to add to the list of ignored paths.
+   */
+  ignorePath (dir) {
+    if (typeof dir === 'string') {
+      this.IGNOREDLIST.push(dir)
+    } else if (dir.length > 0) {
+      this.IGNOREDLIST = this.IGNOREDLIST.concat(dir)
+    }
+  }
+
+  /**
    * Retrieves all files (recursively) within a directory.
    * Supports glob patterns.
    * @param  {string} directory
@@ -102,7 +147,9 @@ class Builder {
    * @return {Array}
    * An array containing the absolute path of each file in the directory.
    */
-  walk (directory) {
+  walk (directory, ignore = []) {
+    let ignored = this.IGNOREDLIST.concat(ignore)
+
     // Support globbing
     if (glob.hasMagic(directory)) {
       let root = './'
@@ -118,9 +165,7 @@ class Builder {
       return glob.sync(directory, {
         cwd: root,
         root,
-        ignore: [
-          'node_modules/**/*'
-        ]
+        ignore: ignored
       })
     }
 
@@ -128,10 +173,21 @@ class Builder {
     let files = []
 
     fs.readdirSync(directory).forEach(dir => {
-      if (fs.statSync(dir).isDirectory()) {
-        files = files.concat(this.walk(path.join(directory, dir)))
-      } else {
-        files.push(path.join(directory, dir))
+      let process = true
+
+      for (let i = 0 ; i < ignored.length; i++) {
+        if (glob.minimatch(dir, `/**/${ignored[i]}`)) {
+          process = false
+          break
+        }
+      }
+
+      if (process) {
+        if (fs.statSync(dir).isDirectory()) {
+          files = files.concat(this.walk(path.join(directory, dir)))
+        } else {
+          files.push(path.join(directory, dir))
+        }
       }
     })
 
