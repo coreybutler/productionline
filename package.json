@@ -27,7 +27,9 @@
   "dependencies": {
     "babel-core": "^6.26.0",
     "chalk": "^2.3.0",
+    "chokidar": "^2.0.0",
     "clean-css": "^4.1.9",
+    "cliui": "^4.0.0",
     "fs-extra": "^5.0.0",
     "glob": "^7.1.2",
     "shortbus": "^1.2.7",

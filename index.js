@@ -2,10 +2,13 @@ const TaskRunner = require('shortbus')
 const path = require('path')
 const fs = require('fs-extra')
 const glob = require('glob')
+const minimatch = require('minimatch')
 const babel = require('babel-core')
 const minifier = require('uglify-js')
 const CleanCSS = require('clean-css')
 const chalk = require('chalk')
+const table = require('cliui')
+const localpackage = require('./package.json')
 
 class Builder {
   constructor () {
@@ -14,9 +17,19 @@ class Builder {
     this.PKG = require(path.join(process.cwd(), 'package.json'))
 
     // Metadata
-    this.APPVERSION = pkg.version
+    this.APPVERSION = this.PKG.version
     this.HEADER = `Copyright (c) ${(new Date()).getFullYear()} ${this.author}. All Rights Reserved.\nVersion ${this.version} built on ${new Date().toDateString()}.`
     this.FOOTER = null
+    this.COLORS = {
+      failure: chalk.bold.rgb(214, 48, 49),
+      warn: chalk.bold.rgb(225, 112, 85),
+      info: chalk.rgb(116, 185, 255),
+      log: chalk.rgb(223, 230, 233),
+      highlight: chalk.bold.rgb(232, 67, 147),
+      success: chalk.bold.rgb(85, 239, 196),
+      subtle: chalk.rgb(99, 110, 114),
+      verysubtle: chalk.rgb(45, 52, 54)
+    }
 
     // Filepaths
     this.SOURCE = path.resolve('./src')
@@ -30,8 +43,8 @@ class Builder {
 
     // Find .gitignore and .buildignore. Add them to the ignored list.
     this.IGNOREDLIST = this.IGNOREDLIST.concat(
-      (fs.readFileSync(path.join(__dirname, './.gitignore')).toString()
-      + fs.readFileSync(path.join(__dirname, './.buildignore')).toString())
+      (fs.readFileSync(path.join(process.cwd(), '.gitignore')).toString()
+      + fs.readFileSync(path.join(process.cwd(), '.buildignore')).toString())
       .replace(/\#.*/gi, '')
       .split(require('os').EOL)
       .filter(glob => {
@@ -43,6 +56,7 @@ class Builder {
       })
     )
 
+    // Helper tool for custom logging.
     this.joinArguments = args => {
       let out = []
 
@@ -52,6 +66,54 @@ class Builder {
 
       return out.join(' ')
     }
+
+    // Initialize tasks.
+    this.tasks.add('Preparing Build', next => {
+      let ui = new table()
+
+      ui.div({
+        text: this.COLORS.info(`Running ${localpackage.name} v${localpackage.version} for ${this.PKG.name}`),
+        border: false,
+        padding: [1, 0, 1, 2]
+      })
+
+      ui.div({
+        text: chalk.bold('Source:'),
+        width: 12,
+        padding: [0, 0, 0, 2]
+      }, {
+        text: this.SOURCE
+      })
+
+      ui.div({
+        text: chalk.bold('Output:'),
+        width: 12,
+        padding: [0, 0, 0, 2]
+      }, {
+        text: this.OUTPUT
+      })
+
+      ui.div({
+        text: chalk.bold('Assets:'),
+        width: 12,
+        padding: [0, 0, 0, 2]
+      }, {
+        text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
+      })
+
+      ui.div({
+        text: this.COLORS.subtle('Ignored:'),
+        width: 12,
+        padding: [1, 0, 1, 2]
+      }, {
+        text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
+        padding: [1, 0, 1, 0]
+      })
+
+      console.log(ui.toString())
+
+      next()
+    })
   }
 
   get package () {
@@ -100,6 +162,10 @@ class Builder {
     this.FOOTER = value
   }
 
+  get source () {
+    return this.SOURCE
+  }
+
   set source (value) {
     this.SOURCE = value
   }
@@ -108,8 +174,16 @@ class Builder {
     this.OUTPUT = value
   }
 
+  get destination () {
+    return this.OUTPUT
+  }
+
   set assets (value) {
     this.ASSETS = value
+  }
+
+  get Table () {
+    return table
   }
 
   /**
@@ -148,6 +222,10 @@ class Builder {
    * An array containing the absolute path of each file in the directory.
    */
   walk (directory, ignore = []) {
+    if (!directory) {
+      return []
+    }
+
     let ignored = this.IGNOREDLIST.concat(ignore)
 
     // Support globbing
@@ -176,14 +254,14 @@ class Builder {
       let process = true
 
       for (let i = 0 ; i < ignored.length; i++) {
-        if (glob.minimatch(dir, `/**/${ignored[i]}`)) {
+        if (minimatch(path.join(directory, dir), `/**/${ignored[i]}`)) {
           process = false
           break
         }
       }
 
       if (process) {
-        if (fs.statSync(dir).isDirectory()) {
+        if (fs.statSync(path.join(directory, dir)).isDirectory()) {
           files = files.concat(this.walk(path.join(directory, dir)))
         } else {
           files.push(path.join(directory, dir))
@@ -195,13 +273,52 @@ class Builder {
   }
 
   /**
+   * Read a file and autoconvert bytecode to a string.
+   * @param  {String} filepath
+   * Absolute path of the input file.
+   * @param {Function} callback
+   * The content of the file is passed as the only attribute to the callback.
+   * If an error occurs, it is thrown.
+   */
+  readFile (filepath, callback) {
+    fs.readFile(filepath, (err, content) => {
+      if (err) {
+        throw err
+      }
+
+      callback(content.toString().trim())
+    })
+  }
+
+  /**
+   * Read a file and autoconvert bytecode to a string.
+   * @param  {String} filepath
+   * Absolute path of the input file.
+   * @return {String}
+   * The content of the file.
+   */
+  readFileSync (filepath) {
+    return fs.readFileSync(filepath).toString().trim()
+  }
+
+  /**
+   * Write a file to disk.
+   * Almost the same as fs.writeFileSync (i.e. it overwrites),
+   * except if the parent directory does not exist, it's created.
+   * Accepts the same parameters as fs.writeFileSync.
+   */
+  writeFileSync () {
+    fs.outputFileSync(...arguments)
+  }
+
+  /**
    * Create the same path in the output directory as the input directory.
    * @param  {string} inputFilepath
    * The path to mimic in the output directory.
    * @return {string}
    * The corresponding output path.
    */
-  output (inputFilepath) {
+  outputDirectory (inputFilepath) {
     return inputFilepath.replace(this.SOURCE, this.OUTPUT)
   }
 
@@ -212,8 +329,20 @@ class Builder {
    * @return {string}
    * The corresponding input path.
    */
-  local (outFilepath) {
+  localDirectory (outFilepath) {
     return outFilepath.replace(this.SOURCE, '').replace(this.OUTPUT, '')
+  }
+
+  /**
+   * The path, stripped of the preceding source/destination path.
+   * This is promarily used to create a _relative_ path.
+   * @param  {String} path
+   * Abosulute/full path of the file.
+   * @return {String}
+   * The relative path from either the source or destination.
+   */
+  relativePath (filepath) {
+    return ('./' + filepath.replace(this.SOURCE, '').replace(this.OUTPUT, '').trim()).replace(/\/{2,100}/, '/')
   }
 
   // transpile (filepath callback) {
@@ -328,7 +457,7 @@ class Builder {
    */
   copyToOutput (filepath, callback) {
     let sourcePath = path.join(this.SOURCE, filepath)
-    let outputPath = this.output(sourcePath)
+    let outputPath = this.outputDirectory(sourcePath)
 
     fs.copy(sourcePath, outputPath, callback)
   }
@@ -374,7 +503,7 @@ class Builder {
 
     this.tasks.add('Build HTML', next => {
       this.walk(path.join(this.SOURCE, '/**/*.htm')).forEach(filepath => {
-        fs.copySync(filepath, this.output(filepath))
+        fs.copySync(filepath, this.outputDirectory(filepath))
       })
 
       next()
@@ -384,14 +513,14 @@ class Builder {
       let transpiler = new TaskRunner()
 
       this.walk(path.join(this.SOURCE, '/**/*.js')).forEach(filepath => {
-        transpiler.add(`Transpile ${this.local(filepath)}`, cont => {
+        transpiler.add(`Transpile ${this.localDirectory(filepath)}`, cont => {
           let transpiled = this.transpile(filepath)
           let minified = this.minify(transpiled.code)
           // console.log(transpiled.map)
           // console.log(transpiled.ast)
           let content = this.applyHeader(minified.code, 'js')
 
-          this.writeFile(this.output(filepath), content, cont)
+          this.writeFile(this.outputDirectory(filepath), content, cont)
         })
       })
 
@@ -403,10 +532,10 @@ class Builder {
       let cssTasks = new TaskRunner()
 
       this.walk(path.join(this.SOURCE, '/**/*.css')).forEach(filepath => {
-        cssTasks.add(`Minify ${this.local(filepath)}`, cont => {
+        cssTasks.add(`Minify ${this.localDirectory(filepath)}`, cont => {
           let minified = new CleanCSS().minify(fs.readFileSync(filepath).toString())
           let content = this.applyHeader(minified.styles, 'js')
-          this.writeFile(this.output(filepath), content, cont)
+          this.writeFile(this.outputDirectory(filepath), content, cont)
         })
       })
 
@@ -426,51 +555,113 @@ class Builder {
    * parallel processing.
    */
   run (sequential = true) {
-    this.tasks.on('stepcomplete', step => this.log(`  ${step.number}) ${step.name} completed.`))
-    this.tasks.on('complete', () => this.success('\n  === DONE ===\n'))
+    this.tasks.on('stepstarted', step => {
+      let ui = new table()
+
+      ui.div({
+        text: step.number - 1,
+        width: 3,
+        padding: [0, 0, 0, 2]
+      }, {
+        text: ')',
+        width: 2
+      }, {
+        text: this.COLORS.log(`${step.name}`)
+      })
+
+      console.log(ui.toString())
+    })
+
+    this.tasks.on('complete', () => {
+      let ui = new table()
+
+      ui.div({
+        text: this.COLORS.log('Complete.'),
+        padding: [1, 2, 1, 2],
+      })
+
+      console.log(ui.toString())
+    })
     this.tasks.run(sequential)
+  }
+
+  /**
+   * Watch the source directory for changes. Any time a change occurs,
+   * the callback is executed. Running this will prevent the build from
+   * exiting, so it should only be used for development automation.
+   * @param  {Function} callback
+   * The method to execute when a file change is detected.
+   * @param {String} callback.action
+   * The type of action detected. This will be `create`, `update`, or `delete`.
+   * @param {String} callback.path
+   * The absolute path of the file or directory that changed.
+   * @return {Object}
+   * Returns the monitoring object (chokidar). This has a `close()` method to
+   * stop watching.
+   */
+  watch (callback) {
+    return require('chokidar').watch(path.join(this.SOURCE, '**/*'), {
+      ignored: this.IGNOREDLIST
+    })
+    .on('add', filepath => callback('create', filepath))
+    .on('change', filepath => callback('update', filepath))
+    .on('unlink', filepath => callback('delete', filepath))
   }
 
   /**
    * A special color-coded (red) console logger. Behaves the same as `console.log`
    */
   failure () {
-    console.log(chalk.bold.rgb(214, 48, 49)(this.joinArguments(arguments)))
+    console.log(this.COLORS.failure(this.joinArguments(arguments)))
   }
 
   /**
    * A special color-coded (orange) console logger. Behaves the same as `console.log`
    */
   warn () {
-    console.log(chalk.bold.rgb(225, 112, 85)(this.joinArguments(arguments)))
+    console.log(this.COLORS.warn(this.joinArguments(arguments)))
   }
 
   /**
    * A special color-coded (light blue) console logger. Behaves the same as `console.log`
    */
   info () {
-    console.log(chalk.bold.rgb(116, 185, 255)(this.joinArguments(arguments)))
+    console.log(this.COLORS.info(this.joinArguments(arguments)))
   }
 
   /**
    * A special color-coded (almost white) console logger. Behaves the same as `console.log`
    */
   log () {
-    console.log(chalk.bold.rgb(223, 230, 233)(this.joinArguments(arguments)))
+    console.log(this.COLORS.log(this.joinArguments(arguments)))
   }
 
   /**
    * A special color-coded (bright pink) console logger. Behaves the same as `console.log`
    */
   highlight () {
-    console.log(chalk.bold.rgb(232, 67, 147)(this.joinArguments(arguments)))
+    console.log(this.COLORS.highlight(this.joinArguments(arguments)))
   }
 
   /**
    * A special color-coded (tea green) console logger. Behaves the same as `console.log`
    */
   success () {
-    console.log(chalk.bold.rgb(85, 239, 196)(this.joinArguments(arguments)))
+    console.log(this.COLORS.success(this.joinArguments(arguments)))
+  }
+
+  /**
+   * A special color-coded (gray) console logger. Behaves the same as `console.log`
+   */
+  subtle () {
+    console.log(this.COLORS.subtle(this.joinArguments(arguments)))
+  }
+
+  /**
+   * A special color-coded (dark gray) console logger. Behaves the same as `console.log`
+   */
+  verysubtle () {
+    console.log(this.COLORS.verysubtle(this.joinArguments(arguments)))
   }
 }
 
