@@ -30,6 +30,7 @@ class Builder {
       subtle: chalk.rgb(99, 110, 114),
       verysubtle: chalk.rgb(45, 52, 54)
     }
+    this.SOURCEMAPURL = null
 
     // Filepaths
     this.SOURCE = path.resolve('./src')
@@ -56,6 +57,26 @@ class Builder {
       })
     )
 
+    // Get the sourcemap root if it's in the package.
+    if (this.PKG.hasOwnProperty('sourcemaps')) {
+      let sourcemapuri = this.PKG.sourcemaps
+      let urimatch = /\{{2}(.*)\}{2}/i.exec(sourcemapuri)
+      let ct = 0
+
+      while (urimatch !== null && ct < 100) {
+        if (this.PKG.hasOwnProperty(urimatch[1])) {
+          sourcemapuri = sourcemapuri.replace(new RegExp(`{{${urimatch[1]}}}`, 'gi'), this.PKG[urimatch[1]])
+        } else {
+          sourcemapuri = sourcemapuri.replace(new RegExp(`{{${urimatch[1]}}}`, 'gi'), '')
+        }
+
+        urimatch = /\{{2}(.*)\}{2}/i.exec(sourcemapuri)
+        ct++
+      }
+
+      this.SOURCEMAPURL = sourcemapuri
+    }
+
     // Helper tool for custom logging.
     this.joinArguments = args => {
       let out = []
@@ -66,6 +87,8 @@ class Builder {
 
       return out.join(' ')
     }
+
+    let width = 15
 
     // Initialize tasks.
     this.tasks.add('Preparing Build', next => {
@@ -79,7 +102,7 @@ class Builder {
 
       ui.div({
         text: chalk.bold('Source:'),
-        width: 12,
+        width,
         padding: [0, 0, 0, 2]
       }, {
         text: this.SOURCE
@@ -87,7 +110,7 @@ class Builder {
 
       ui.div({
         text: chalk.bold('Output:'),
-        width: 12,
+        width,
         padding: [0, 0, 0, 2]
       }, {
         text: this.OUTPUT
@@ -95,15 +118,26 @@ class Builder {
 
       ui.div({
         text: chalk.bold('Assets:'),
-        width: 12,
+        width,
         padding: [0, 0, 0, 2]
       }, {
         text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
       })
 
+      if (this.hasOwnProperty('SOURCEMAPURL') &&this.SOURCEMAPURL !== null) {
+        ui.div({
+          text: chalk.bold('SourceMaps:'),
+          width,
+          padding: [1, 0, 0, 2]
+        }, {
+          text: this.SOURCEMAPURL,
+          padding: [1, 0, 0, 0]
+        })
+      }
+
       ui.div({
         text: this.COLORS.subtle('Ignored:'),
-        width: 12,
+        width,
         padding: [1, 0, 1, 2]
       }, {
         text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
@@ -180,6 +214,14 @@ class Builder {
 
   set assets (value) {
     this.ASSETS = value
+  }
+
+  get sourcemapurl () {
+    return this.SOURCEMAPURL
+  }
+
+  set sourcemapurl (value) {
+    this.SOURCEMAPURL = value
   }
 
   get Table () {
@@ -400,6 +442,7 @@ class Builder {
     let msg = this.HEADER.split('\n')
 
     switch (type.trim().toLowerCase()) {
+      case 'htm':
       case 'html':
         return '<!--\n' + msg.join('\n') + '\n-->\n' + code
 
@@ -431,6 +474,7 @@ class Builder {
     let msg = this.FOOTER.split('\n')
 
     switch (type.trim().toLowerCase()) {
+      case 'htm':
       case 'html':
         return code + '\n<!--\n' + msg.join('\n') + '\n-->\n'
 
@@ -502,7 +546,7 @@ class Builder {
     })
 
     this.tasks.add('Build HTML', next => {
-      this.walk(path.join(this.SOURCE, '/**/*.htm')).forEach(filepath => {
+      this.walk(path.join(this.SOURCE, '/**/*.htm*')).forEach(filepath => {
         fs.copySync(filepath, this.outputDirectory(filepath))
       })
 
