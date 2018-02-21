@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"No tests yet\"",
-    "build": "node build.js --build"
+    "build": "node build.js --make"
   },
   "author": "John Doe",
   "license": "MIT",

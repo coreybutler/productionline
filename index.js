@@ -7,11 +7,14 @@ const babel = require('babel-core')
 const minifier = require('uglify-js')
 const CleanCSS = require('clean-css')
 const chalk = require('chalk')
-const table = require('cliui')
+const CLITable = require('cliui')
 const localpackage = require('./package.json')
+const EventEmitter = require('events').EventEmitter
 
-class Builder {
+class Builder extends EventEmitter {
   constructor () {
+    super()
+
     this.tasks = new TaskRunner()
 
     this.PKG = require(path.join(process.cwd(), 'package.json'))
@@ -43,19 +46,33 @@ class Builder {
     ]
 
     // Find .gitignore and .buildignore. Add them to the ignored list.
-    this.IGNOREDLIST = this.IGNOREDLIST.concat(
-      (fs.readFileSync(path.join(process.cwd(), '.gitignore')).toString()
-      + fs.readFileSync(path.join(process.cwd(), '.buildignore')).toString())
-      .replace(/\#.*/gi, '')
-      .split(require('os').EOL)
-      .filter(glob => {
-        if (glob.trim().charAt(0) === '!') {
-          return false
-        }
+    try {
+      this.IGNOREDLIST = this.IGNOREDLIST.concat(
+        fs.readFileSync(path.join(process.cwd(), '.gitignore')).toString()
+          .replace(/#.*/gi, '')
+          .split(require('os').EOL)
+          .filter(glob => {
+            if (glob.trim().charAt(0) === '!') {
+              return false
+            }
 
-        return glob.trim().length > 0
-      })
-    )
+            return glob.trim().length > 0
+          }))
+    } catch (e) {}
+
+    try {
+      this.IGNOREDLIST = this.IGNOREDLIST.concat(
+        fs.readFileSync(path.join(process.cwd(), '.buildignore')).toString()
+          .replace(/#.*/gi, '')
+          .split(require('os').EOL)
+          .filter(glob => {
+            if (glob.trim().charAt(0) === '!') {
+              return false
+            }
+
+            return glob.trim().length > 0
+          }))
+    } catch (e) {}
 
     // Get the sourcemap root if it's in the package.
     if (this.PKG.hasOwnProperty('sourcemaps')) {
@@ -91,63 +108,71 @@ class Builder {
     let width = 15
 
     // Initialize tasks.
-    this.tasks.add('Preparing Build', next => {
-      let ui = new table()
+    Object.defineProperty(this, 'prepareBuild', {
+      enumerable: false,
+      writable: true,
+      value: () => {
+        this.tasks.add('Preparing Build', next => {
+          let ui = new CLITable()
 
-      ui.div({
-        text: this.COLORS.info(`Running ${localpackage.name} v${localpackage.version} for ${this.PKG.name}`),
-        border: false,
-        padding: [1, 0, 1, 2]
-      })
+          ui.div({
+            text: this.COLORS.info(`Running ${localpackage.name} v${localpackage.version} for ${this.PKG.name}`),
+            border: false,
+            padding: [1, 0, 1, 2]
+          })
 
-      ui.div({
-        text: chalk.bold('Source:'),
-        width,
-        padding: [0, 0, 0, 2]
-      }, {
-        text: this.SOURCE
-      })
+          ui.div({
+            text: chalk.bold('Source:'),
+            width,
+            padding: [0, 0, 0, 2]
+          }, {
+            text: this.SOURCE
+          })
 
-      ui.div({
-        text: chalk.bold('Output:'),
-        width,
-        padding: [0, 0, 0, 2]
-      }, {
-        text: this.OUTPUT
-      })
+          ui.div({
+            text: chalk.bold('Output:'),
+            width,
+            padding: [0, 0, 0, 2]
+          }, {
+            text: this.OUTPUT
+          })
 
-      ui.div({
-        text: chalk.bold('Assets:'),
-        width,
-        padding: [0, 0, 0, 2]
-      }, {
-        text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
-      })
+          ui.div({
+            text: chalk.bold('Assets:'),
+            width,
+            padding: [0, 0, 0, 2]
+          }, {
+            text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
+          })
 
-      if (this.hasOwnProperty('SOURCEMAPURL') &&this.SOURCEMAPURL !== null) {
-        ui.div({
-          text: chalk.bold('SourceMaps:'),
-          width,
-          padding: [1, 0, 0, 2]
-        }, {
-          text: this.SOURCEMAPURL,
-          padding: [1, 0, 0, 0]
+          if (this.hasOwnProperty('SOURCEMAPURL') && this.SOURCEMAPURL !== null) {
+            ui.div({
+              text: chalk.bold('SourceMaps:'),
+              width,
+              padding: [1, 0, 0, 2]
+            }, {
+              text: this.SOURCEMAPURL,
+              padding: [1, 0, 0, 0]
+            })
+          }
+
+          ui.div({
+            text: this.COLORS.subtle('Ignored:'),
+            width,
+            padding: [1, 0, 1, 2]
+          }, {
+            text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
+            padding: [1, 0, 1, 0]
+          })
+
+          console.log(ui.toString())
+
+          next()
         })
       }
-
-      ui.div({
-        text: this.COLORS.subtle('Ignored:'),
-        width,
-        padding: [1, 0, 1, 2]
-      }, {
-        text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
-        padding: [1, 0, 1, 0]
-      })
-
-      console.log(ui.toString())
-
-      next()
     })
+
+    this.prepareBuild()
   }
 
   get package () {
@@ -225,7 +250,7 @@ class Builder {
   }
 
   get Table () {
-    return table
+    return CLITable
   }
 
   /**
@@ -295,7 +320,7 @@ class Builder {
     fs.readdirSync(directory).forEach(dir => {
       let process = true
 
-      for (let i = 0 ; i < ignored.length; i++) {
+      for (let i = 0; i < ignored.length; i++) {
         if (minimatch(path.join(directory, dir), `/**/${ignored[i]}`)) {
           process = false
           break
@@ -527,7 +552,7 @@ class Builder {
    * @param  {Boolean} [clean=true]
    *
    */
-  build (clean = true) {
+  make (clean = true) {
     if (clean) {
       this.clean()
     }
@@ -589,6 +614,26 @@ class Builder {
   }
 
   /**
+   * Add a custom step.
+   *
+   * ```js
+   * ProductionLine.customStep(function (next) {
+   *   // .. do something ..
+   *   next() // Advances to the next step.
+   * })
+   * ```
+   * @param {string} [stepName]
+   * An optional argument containing the step name.
+   * @param {function} callback
+   * The function containing the logic of the step.
+   * @param {function} callback.next
+   * The method to call when to complete an asynchronous step.
+   */
+  customStep () {
+    this.tasks.add(...arguments)
+  }
+
+  /**
    * Run the all of the tasks in the production/assembly line.
    * @param  {Boolean} [sequential=true]
    * By default, all tasks are run in sequential order (one after the other).
@@ -598,9 +643,14 @@ class Builder {
    * option is here specifically for build pipelines that are designed for
    * parallel processing.
    */
-  run (sequential = true) {
+  run (sequential = true, callback) {
+    if (typeof sequential === 'function') {
+      callback = sequential
+      sequential = true
+    }
+
     this.tasks.on('stepstarted', step => {
-      let ui = new table()
+      let ui = new CLITable()
 
       ui.div({
         text: step.number - 1,
@@ -614,18 +664,29 @@ class Builder {
       })
 
       console.log(ui.toString())
+
+      this.emit('step.started', step)
     })
 
+    this.tasks.on('stepcompleted', step => this.emit('step.complete', step))
+
     this.tasks.on('complete', () => {
-      let ui = new table()
+      let ui = new CLITable()
 
       ui.div({
         text: this.COLORS.log('Complete.'),
-        padding: [1, 2, 1, 2],
+        padding: [1, 2, 1, 2]
       })
 
       console.log(ui.toString())
+
+      // Fire the callback if it exists
+      callback && callback()
+
+      // Trigger the completion event.
+      this.emit('complete')
     })
+
     this.tasks.run(sequential)
   }
 
@@ -647,9 +708,21 @@ class Builder {
     return require('chokidar').watch(path.join(this.SOURCE, '**/*'), {
       ignored: this.IGNOREDLIST
     })
-    .on('add', filepath => callback('create', filepath))
-    .on('change', filepath => callback('update', filepath))
-    .on('unlink', filepath => callback('delete', filepath))
+      .on('add', filepath => {
+        this.tasks.steps = []
+        this.prepareBuild()
+        callback('create', filepath) // eslint-disable-line
+      })
+      .on('change', filepath => {
+        this.tasks.steps = []
+        this.prepareBuild()
+        callback('update', filepath) // eslint-disable-line
+      })
+      .on('unlink', filepath => {
+        this.tasks.steps = []
+        this.prepareBuild()
+        callback('delete', filepath) // eslint-disable-line
+      })
   }
 
   /**

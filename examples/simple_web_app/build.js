@@ -7,7 +7,7 @@ const path = require('path')
 const builder = new Builder()
 
 switch (process.argv[2]) {
-  case '--build':
+  case '--make':
     console.log('Running Building Process:')
 
     // The following are not explicitly necessary since the source,
@@ -19,11 +19,10 @@ switch (process.argv[2]) {
     builder.destination = path.resolve('./dist')
 
     // Queue the built-in build process.
-    builder.build()
+    builder.make()
+    builder.run()
     break
 
   default:
-    return console.log('No command specified!')
+    console.log('No command specified!')
 }
-
-builder.run()

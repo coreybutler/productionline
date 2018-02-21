@@ -1,10 +1,10 @@
 {
   "name": "productionline",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "An extendable class for creating common build pipelines.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"No tests yet\""
+    "test": "tape test/**/*.js | tap-spec && standard | snazzy --verbose"
   },
   "repository": {
     "type": "git",
@@ -25,14 +25,21 @@
   },
   "homepage": "https://github.com/coreybutler/productionline#readme",
   "dependencies": {
-    "babel-core": "^6.26.0",
-    "chalk": "^2.3.0",
-    "chokidar": "^2.0.0",
-    "clean-css": "^4.1.9",
-    "cliui": "^4.0.0",
-    "fs-extra": "^5.0.0",
-    "glob": "^7.1.2",
-    "shortbus": "^1.2.7",
-    "uglify-js": "^3.3.9"
+    "babel-core": "6.26.0",
+    "chalk": "2.3.0",
+    "chokidar": "2.0.0",
+    "clean-css": "4.1.9",
+    "cliui": "4.0.0",
+    "fs-extra": "5.0.0",
+    "glob": "7.1.2",
+    "shortbus": "1.2.7",
+    "uglify-js": "3.3.9"
+  },
+  "devDependencies": {
+    "snazzy": "7.0.0",
+    "standard": "11.0.0",
+    "standard-tap": "1.0.2",
+    "tap-spec": "4.1.1",
+    "tape": "4.9.0"
   }
 }
