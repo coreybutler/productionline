@@ -549,14 +549,8 @@ class Builder extends EventEmitter {
    * 1. Transpile JS using Babel.
    * 1. Minify JS using Uglify.
    * 1. Minify CSS.
-   * @param  {Boolean} [clean=true]
-   *
    */
-  make (clean = true) {
-    if (clean) {
-      this.clean()
-    }
-
+  make () {
     this.tasks.add('Copy Assets', next => {
       let assetTasks = new TaskRunner()
 
@@ -649,11 +643,14 @@ class Builder extends EventEmitter {
       sequential = true
     }
 
+    let counter = 0
     this.tasks.on('stepstarted', step => {
+      counter++
+
       let ui = new CLITable()
 
       ui.div({
-        text: step.number - 1,
+        text: counter,
         width: 3,
         padding: [0, 0, 0, 2]
       }, {
@@ -706,7 +703,8 @@ class Builder extends EventEmitter {
    */
   watch (callback) {
     return require('chokidar').watch(path.join(this.SOURCE, '**/*'), {
-      ignored: this.IGNOREDLIST
+      ignored: this.IGNOREDLIST,
+      ignoreInitial: true
     })
       .on('add', filepath => {
         this.tasks.steps = []
