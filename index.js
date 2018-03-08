@@ -196,6 +196,19 @@ class Builder extends EventEmitter {
     })
 
     this.prepareBuild()
+
+    // Support commands
+    let args = process.argv.slice(2)
+
+    if (args.length > 0 && cfg.hasOwnProperty('commands')) {
+      if (cfg.commands.hasOwnProperty(args[0])) {
+        if (typeof cfg.commands[args[0]] !== 'function') {
+          return console.log(`args[0] flag does not have a valid function associated with it.`)
+        }
+
+        cfg.commands[args[0]](args)
+      }
+    }
   }
 
   get package () {

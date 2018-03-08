@@ -18,28 +18,33 @@ The following would go in a file called `build.js`.
 
 ```js
 const ProductionLine = require('productionline')
-const builder = new ProductionLine()
+const builder = new ProductionLine({
+  commands: {
+    default: function (cmd) {
+      console.log('No command specified!')
+    },
 
-switch (process.argv[2]) {
-  case '--make':
-    console.log('Running Build Process:')
+    '--buildme': function (cmd) {
+      console.log('Running Build Process:')
 
-    // The following are not explicitly necessary since the source,
-    // assets, and destination are all being set to their defaults.
-    // However; the code is written so you can supply your own
-    // folder structure.
-    builder.source = path.resolve('./src')
-    builder.assets = path.resolve('./assets') // Relative to source!
-    builder.destination = path.resolve('./dist')
+      // The following are not explicitly necessary since the source,
+      // assets, and destination are all being set to their defaults.
+      // However; the code is written so you can supply your own
+      // folder structure.
+      builder.source = path.resolve('./src')
+      builder.assets = path.resolve('./assets') // Relative to source!
+      builder.destination = path.resolve('./dist')
 
-    // Queue the built-in make process.
-    builder.make()
-    builder.run()
-    break
+      // Queue the built-in make process.
+      builder.addTask('My Build Task', function (next) {
+        // Do something
+        next()
+      })
 
-  default:
-    return console.log('No command specified!')
-}
+      builder.run()
+    }
+  }
+})
 ```
 
 In the `package.json` file, add an npm command like:
@@ -48,7 +53,7 @@ In the `package.json` file, add an npm command like:
 {
   "scripts": {
     "test": "...",
-    "build": "node build.js --make"
+    "build": "node build.js --buildme"
   }
 }
 ```
