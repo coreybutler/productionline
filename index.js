@@ -3,16 +3,19 @@ const path = require('path')
 const fs = require('fs-extra')
 const glob = require('glob')
 const minimatch = require('minimatch')
-const babel = require('babel-core')
-const minifier = require('uglify-js')
-const CleanCSS = require('clean-css')
 const chalk = require('chalk')
 const CLITable = require('cliui')
 const localpackage = require('./package.json')
+const Monitor = require('./Monitor')
 const EventEmitter = require('events').EventEmitter
 
+/**
+ * @class ProductionLine.Builder
+ * A queueing and execution system.
+ * @extends EventEmitter
+ */
 class Builder extends EventEmitter {
-  constructor () {
+  constructor (cfg = {}) {
     super()
 
     this.tasks = new TaskRunner()
@@ -21,8 +24,20 @@ class Builder extends EventEmitter {
 
     // Metadata
     this.APPVERSION = this.PKG.version
-    this.HEADER = `Copyright (c) ${(new Date()).getFullYear()} ${this.author}. All Rights Reserved.\nVersion ${this.version} built on ${new Date().toDateString()}.`
+
+    /**
+     * @cfg {string} [header]
+     * A standard header to be applied to files.
+     * Defaults to "Copyright (c) <DATE> <AUTHOR>. All Rights Reserved.\nVersion X.X.X built on <DATE>."
+     */
+    this.HEADER = cfg.header || `Copyright (c) ${(new Date()).getFullYear()} ${this.author}. All Rights Reserved.\nVersion ${this.version} built on ${new Date().toDateString()}.`
+
+    /**
+     * @cfg {string} [footer]
+     * A standard footer to be applied to files. Defaults to blank.
+     */
     this.FOOTER = null
+
     this.COLORS = {
       failure: chalk.bold.rgb(214, 48, 49),
       warn: chalk.bold.rgb(225, 112, 85),
@@ -33,15 +48,34 @@ class Builder extends EventEmitter {
       subtle: chalk.rgb(99, 110, 114),
       verysubtle: chalk.rgb(45, 52, 54)
     }
-    this.SOURCEMAPURL = null
 
     // Filepaths
-    this.SOURCE = path.resolve('./src')
-    this.OUTPUT = path.resolve('./dist')
-    this.ASSETS = [
+    /**
+     * @cfg {string} [source=./src]
+     * The root directory containing source files.
+     */
+    this.SOURCE = path.resolve(cfg.source || './src')
+
+    /**
+     * @cfg {string} [output=./dist]
+     * The root directory where output files will be stored.
+     * This will be created if it does not already exist.
+     */
+    this.OUTPUT = path.resolve(cfg.output || './dist')
+
+    /**
+     * @cfg {string} [assets=./assets]
+     * The root directory containing non-buildable assets such as multimedia.
+     */
+    this.ASSETS = cfg.assets || [
       './assets'
     ]
-    this.IGNOREDLIST = [
+
+    /**
+     * @cfg {string} [ignoredList=node_modules]
+     * A list of directories to ignore.
+     */
+    this.IGNOREDLIST = cfg.ignoredList || [
       'node_modules/**/*'
     ]
 
@@ -74,26 +108,6 @@ class Builder extends EventEmitter {
           }))
     } catch (e) {}
 
-    // Get the sourcemap root if it's in the package.
-    if (this.PKG.hasOwnProperty('sourcemaps')) {
-      let sourcemapuri = this.PKG.sourcemaps
-      let urimatch = /\{{2}(.*)\}{2}/i.exec(sourcemapuri)
-      let ct = 0
-
-      while (urimatch !== null && ct < 100) {
-        if (this.PKG.hasOwnProperty(urimatch[1])) {
-          sourcemapuri = sourcemapuri.replace(new RegExp(`{{${urimatch[1]}}}`, 'gi'), this.PKG[urimatch[1]])
-        } else {
-          sourcemapuri = sourcemapuri.replace(new RegExp(`{{${urimatch[1]}}}`, 'gi'), '')
-        }
-
-        urimatch = /\{{2}(.*)\}{2}/i.exec(sourcemapuri)
-        ct++
-      }
-
-      this.SOURCEMAPURL = sourcemapuri
-    }
-
     // Helper tool for custom logging.
     this.joinArguments = args => {
       let out = []
@@ -108,67 +122,76 @@ class Builder extends EventEmitter {
     let width = 15
 
     // Initialize tasks.
-    Object.defineProperty(this, 'prepareBuild', {
-      enumerable: false,
-      writable: true,
-      value: () => {
-        this.tasks.add('Preparing Build', next => {
-          let ui = new CLITable()
+    Object.defineProperties(this, {
+      prepareBuild: {
+        enumerable: false,
+        writable: true,
+        value: () => {
+          this.tasks.add('Preparing Build', next => {
+            let ui = new CLITable()
 
-          ui.div({
-            text: this.COLORS.info(`Running ${localpackage.name} v${localpackage.version} for ${this.PKG.name}`),
-            border: false,
-            padding: [1, 0, 1, 2]
-          })
-
-          ui.div({
-            text: chalk.bold('Source:'),
-            width,
-            padding: [0, 0, 0, 2]
-          }, {
-            text: this.SOURCE
-          })
-
-          ui.div({
-            text: chalk.bold('Output:'),
-            width,
-            padding: [0, 0, 0, 2]
-          }, {
-            text: this.OUTPUT
-          })
-
-          ui.div({
-            text: chalk.bold('Assets:'),
-            width,
-            padding: [0, 0, 0, 2]
-          }, {
-            text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
-          })
-
-          if (this.hasOwnProperty('SOURCEMAPURL') && this.SOURCEMAPURL !== null) {
             ui.div({
-              text: chalk.bold('SourceMaps:'),
-              width,
-              padding: [1, 0, 0, 2]
-            }, {
-              text: this.SOURCEMAPURL,
-              padding: [1, 0, 0, 0]
+              text: this.COLORS.info(`Running ${localpackage.name} v${localpackage.version} for ${this.PKG.name}`),
+              border: false,
+              padding: [1, 0, 1, 2]
             })
-          }
 
-          ui.div({
-            text: this.COLORS.subtle('Ignored:'),
-            width,
-            padding: [1, 0, 1, 2]
-          }, {
-            text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
-            padding: [1, 0, 1, 0]
+            ui.div({
+              text: chalk.bold('Source:'),
+              width,
+              padding: [0, 0, 0, 2]
+            }, {
+              text: this.SOURCE
+            })
+
+            ui.div({
+              text: chalk.bold('Output:'),
+              width,
+              padding: [0, 0, 0, 2]
+            }, {
+              text: this.OUTPUT
+            })
+
+            ui.div({
+              text: chalk.bold('Assets:'),
+              width,
+              padding: [0, 0, 0, 2]
+            }, {
+              text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
+            })
+
+            ui.div({
+              text: this.COLORS.subtle('Ignored:'),
+              width,
+              padding: [1, 0, 1, 2]
+            }, {
+              text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
+              padding: [1, 0, 1, 0]
+            })
+
+            console.log(ui.toString())
+
+            next()
           })
+        }
+      },
 
-          console.log(ui.toString())
+      LOCAL_MONITOR: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: null
+      },
 
-          next()
-        })
+      /**
+       * @property {Class} TaskRunner
+       * A [Shortbus](https://github.com/coreybutler/shortbus) task runner.
+       */
+      TaskRunner: {
+        enumerable: true,
+        configurable: false,
+        writable: false,
+        value: TaskRunner
       }
     })
 
@@ -264,6 +287,13 @@ class Builder extends EventEmitter {
    */
   set ignore (value) {
     this.IGNOREDLIST = value
+  }
+
+  /**
+   * Provides a reference to the watcher.
+   */
+  get monitor () {
+    return this.LOCAL_MONITOR
   }
 
   /**
@@ -412,50 +442,13 @@ class Builder extends EventEmitter {
     return ('./' + filepath.replace(this.SOURCE, '').replace(this.OUTPUT, '').trim()).replace(/\/{2,100}/, '/')
   }
 
-  // transpile (filepath callback) {
-  //   fs.readFile(filepath, (err, content) => {
-  //     callback(babel.transform(content, {
-  //       presets: ['env']
-  //     }))
-  //   })
-  // }
-
-  /**
-   * Synchronously transpile JavaScript code using Babel.
-   * By default, this uses `presets: ['env']`.
-   * @param  {[type]} filepath [description]
-   * @return {[type]}          [description]
-   */
-  transpile (filepath) {
-    return babel.transform(fs.readFileSync(filepath).toString(), {
-      presets: ['env']
-    })
-  }
-
-  /**
-   * Minify JS code using UglifyJS.
-   * @param  {string} code
-   * This can be raw code or an input file.
-   * @return {[type]}      [description]
-   */
-  minify (code) {
-    try {
-      code = fs.readFileSync(code).toString()
-    } catch (e) {}
-
-    return minifier.minify(code, {
-      mangle: true,
-      compress: true
-    })
-  }
-
   /**
    * Apply text as a header to a file. This injects a comment at the top of
    * the file, based on the content supplied to #header.
    * @param  {String} code
    * The code/content to inject the header above.
-   * @param  {String} [type='js']
-   * The type of file. Supported values include `js`, `css`, and `html`.
+   * @param  {String} [type='sh']
+   * The type of file. Supported values include `sh`, `sql`, `js`, `css`, and `html`.
    * @return {String}
    * Returns the code with the header content applied.
    */
@@ -478,6 +471,16 @@ class Builder extends EventEmitter {
         }
 
         return '/**\n' + msg.map(line => ` * ${line}`).join('\n') + '\n */\n' + code
+
+      case 'sql':
+        if (msg.length === 1) {
+          return `-- ${msg[0]}\n${code}`
+        }
+
+        return '/*\n' + msg.join('\n') + '\n*/\n' + code
+
+      case 'sh':
+        return msg.map(line => `# ${line}`).join('\n')
     }
   }
 
@@ -486,8 +489,8 @@ class Builder extends EventEmitter {
    * the file, based on the content supplied to #footer.
    * @param  {String} code
    * The code/content to inject the footer below.
-   * @param  {String} [type='js']
-   * The type of file. Supported values include `js`, `css`, and `html`.
+   * @param  {String} [type='sh']
+   * The type of file. Supported values include `sh`, `sql`, `js`, `css`, and `html`.
    * @return {String}
    * Returns the code with the header content applied.
    */
@@ -510,6 +513,16 @@ class Builder extends EventEmitter {
         }
 
         return code + '\n/**\n' + msg.map(line => ` * ${line}`).join('\n') + '\n */\n'
+
+      case 'sql':
+        if (msg.length === 1) {
+          return `${code}\n-- ${msg[0]}\n`
+        }
+
+        return code + '\n/*\n' + msg.join('\n') + '\n*/\n'
+
+      case 'sh':
+        return msg.map(line => `# ${line}`).join('\n')
     }
   }
 
@@ -532,83 +545,7 @@ class Builder extends EventEmitter {
   }
 
   /**
-   * Clean the output directory. This guarantees the output directory exists
-   * and is empty.
-   */
-  clean () {
-    this.tasks.add(`Cleaning ${this.OUTPUT}`, next => fs.emptyDir(this.OUTPUT, next))
-  }
-
-  /**
-   * A standard build process. Most build processes will override/extend this,
-   * but this will add the following tasks to the process:
-   *
-   * 1. Clean the output directory.
-   * 1. Copy #assets from the #source to #output directory.
-   * 1. Build HTML (or just copy if minification isn't configured).
-   * 1. Transpile JS using Babel.
-   * 1. Minify JS using Uglify.
-   * 1. Minify CSS.
-   */
-  make () {
-    this.tasks.add('Copy Assets', next => {
-      let assetTasks = new TaskRunner()
-
-      this.ASSETS.forEach(assetPath => {
-        assetTasks.add(`Copying ${assetPath} to output.`, cont => {
-          this.copyToOutput(assetPath, cont)
-        })
-      })
-
-      assetTasks.on('complete', next)
-      assetTasks.run()
-    })
-
-    this.tasks.add('Build HTML', next => {
-      this.walk(path.join(this.SOURCE, '/**/*.htm*')).forEach(filepath => {
-        fs.copySync(filepath, this.outputDirectory(filepath))
-      })
-
-      next()
-    })
-
-    this.tasks.add('Build JavaScript', next => {
-      let transpiler = new TaskRunner()
-
-      this.walk(path.join(this.SOURCE, '/**/*.js')).forEach(filepath => {
-        transpiler.add(`Transpile ${this.localDirectory(filepath)}`, cont => {
-          let transpiled = this.transpile(filepath)
-          let minified = this.minify(transpiled.code)
-          // console.log(transpiled.map)
-          // console.log(transpiled.ast)
-          let content = this.applyHeader(minified.code, 'js')
-
-          this.writeFile(this.outputDirectory(filepath), content, cont)
-        })
-      })
-
-      transpiler.on('complete', next)
-      transpiler.run()
-    })
-
-    this.tasks.add('Build CSS', next => {
-      let cssTasks = new TaskRunner()
-
-      this.walk(path.join(this.SOURCE, '/**/*.css')).forEach(filepath => {
-        cssTasks.add(`Minify ${this.localDirectory(filepath)}`, cont => {
-          let minified = new CleanCSS().minify(fs.readFileSync(filepath).toString())
-          let content = this.applyHeader(minified.styles, 'js')
-          this.writeFile(this.outputDirectory(filepath), content, cont)
-        })
-      })
-
-      cssTasks.on('complete', next)
-      cssTasks.run()
-    })
-  }
-
-  /**
-   * Add a custom step.
+   * Add a custom named task.
    *
    * ```js
    * ProductionLine.customStep(function (next) {
@@ -623,7 +560,7 @@ class Builder extends EventEmitter {
    * @param {function} callback.next
    * The method to call when to complete an asynchronous step.
    */
-  customStep () {
+  addTask () {
     this.tasks.add(...arguments)
   }
 
@@ -700,27 +637,17 @@ class Builder extends EventEmitter {
    * @return {Object}
    * Returns the monitoring object (chokidar). This has a `close()` method to
    * stop watching.
+   * @fires watch
+   * Triggered when the monitor starts. Sends a chokidar instance as a payload.
    */
   watch (callback) {
-    return require('chokidar').watch(path.join(this.SOURCE, '**/*'), {
-      ignored: this.IGNOREDLIST,
-      ignoreInitial: true
-    })
-      .on('add', filepath => {
-        this.tasks.steps = []
-        this.prepareBuild()
-        callback('create', filepath) // eslint-disable-line
-      })
-      .on('change', filepath => {
-        this.tasks.steps = []
-        this.prepareBuild()
-        callback('update', filepath) // eslint-disable-line
-      })
-      .on('unlink', filepath => {
-        this.tasks.steps = []
-        this.prepareBuild()
-        callback('delete', filepath) // eslint-disable-line
-      })
+    if (this.LOCAL_MONITOR === null) {
+      // Intentionally delay the start of the watch so the builder initializes.
+      setTimeout(() => {
+        this.LOCAL_MONITOR = new Monitor(this, callback)
+        this.emit('watch', this.LOCAL_MONITOR)
+      }, 100)
+    }
   }
 
   /**
