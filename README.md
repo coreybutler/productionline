@@ -1,4 +1,4 @@
-# productionline
+# productionline [![Build Status](https://travis-ci.org/coreybutler/productionline.svg?branch=master)](https://travis-ci.org/coreybutler/productionline)
 
 `npm install productionline --save-dev`
 
