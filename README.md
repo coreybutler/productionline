@@ -2,7 +2,7 @@
 
 `npm install productionline --save-dev`
 
-An extendable queuing system for creating build pipelines (transpilation, minification, concatenation, etc).
+An extendable build pipeline class, based on a "queue and run" strategy.
 
 While gulp and grunt are mature tools with a large ecosystem, some build processes simply don't warrant the complexity. Plus, as awesome as streams are, it's typically easier for most developers think of build processes in sequential steps than stream manipulations. Furthermore, a _global executable_ doesn't _have_ to be a requirement for a build pipeline when Node/npm itself is a) suitable for the task and b) already installed. We prefer to configure npm scripts, executed as `npm run build`. This module provides an extendable JS Class, serving as a baseline for running any kind of build pipeline.
 
