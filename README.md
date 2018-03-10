@@ -60,15 +60,11 @@ In the `package.json` file, add an npm command like:
 
 The entire process can then be run using `npm run build`.
 
-## Standard "Make" Process
-
-It is worth looking at the source for the `make()` method. By default, this method will copy assets from the source to destination and minify CSS/JS. This can and often will be overridden with logic suitable for your build process (example: adding transpilation or code concatenation).
-
 ## Extending the Production Line
 
 This is the most anticipated use case, since most build processes are unique in some manner.
 
-Basic ES 2016 class extension is the easiest way to create a custom build tool. The builder queues tasks using an internal  [shortbus](https://github.com/coreybutler/shortbus) instance, accessible via `this.tasks`. Once all tasks are queued, the build process should be run.
+Basic ES 2016 class extension is the easiest way to create a custom build tool. The builder queues tasks using an internal  [shortbus](https://github.com/coreybutler/shortbus) instance, accessible via `this.tasks`. Once all tasks are queued, the build process can be run.
 
 ```js
  const ProductionLine = require('productionline')
@@ -79,37 +75,48 @@ Basic ES 2016 class extension is the easiest way to create a custom build tool. 
    }
 
    make () {
-     this.info('I extend the original make method!')
-     super.make()
+     this.addStep('Custom step', (next) => {
+       // Do something
+       // ...
+
+       // When complete, run the next queued task.
+       next()
+     })
    }
 
    makeDebuggableVersion () {
-     this.tasks.add('Custom Step 1', next => { ... })
+     this.tasks.add('Custom Step 1', next => {
+        someAsynchrnousOperation(() => {
+          next()
+        })
+     })
      this.tasks.add('Custom Step 2', next => { ... })
      this.tasks.add('Custom Step 3', next => { ... })
    }
  }
 
- switch (process.argv[2]) {
-   case '--make':
-     console.log('Running Build Process:')
+ const builder = new ProductionLine({
+   commands: {
+     '--make': () => {
+       console.log('Running Build Process:')
 
-     // Queue the built-in make process.
-     builder.make()
-     break
+       // Queue the built-in make process.
+       builder.make()
+       builder.run() // This executes all of the queued tasks.
+     },
 
-   case '--debug':
-     console.log('Running Building Process:')
+     '--debug': () => {
+       console.log('Running Building Process:')
 
-     // Queue the custom debug process.
-     builder.makeDebuggableVersion()
-     break
+       // Queue the custom debug process.
+       builder.makeDebuggableVersion()
+       builder.run() // This executes all of the queued tasks.
+     },
 
-   default:
-     return console.log('No command specified!')
- }
+     default: () => console.log('No command specified!')
 
- builder.run() // This executes all of the queued tasks.
+   }
+ })
  ```
 
 ## Live Builds
@@ -121,7 +128,13 @@ For example:
 
 ```js
 builder.watch((action, filepath) => {
-  builder.make()
   builder.run()
+
+  builder.watch((action, filepath) => {
+    if (action === 'create') {
+      console.log('New file created, rerun the build.')
+      builder.run()
+    }
+  })
 })
 ```

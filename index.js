@@ -126,6 +126,7 @@ class Builder extends EventEmitter {
       prepareBuild: {
         enumerable: false,
         writable: true,
+        configurable: true,
         value: () => {
           this.tasks.add('Preparing Build', next => {
             let ui = new CLITable()
@@ -275,14 +276,6 @@ class Builder extends EventEmitter {
 
   set assets (value) {
     this.ASSETS = value
-  }
-
-  get sourcemapurl () {
-    return this.SOURCEMAPURL
-  }
-
-  set sourcemapurl (value) {
-    this.SOURCEMAPURL = value
   }
 
   get Table () {

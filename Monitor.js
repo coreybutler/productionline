@@ -40,8 +40,8 @@ class Monitor extends EventEmitter {
       ignoreInitial: true
     })
       .on('add', filepath => this.reset('create', filepath))
-      .on('change', filepath => this.reset('change', filepath))
-      .on('unlink', filepath => this.reset('unlink', filepath))
+      .on('change', filepath => this.reset('update', filepath))
+      .on('unlink', filepath => this.reset('delete', filepath))
 
     this.emit('ready', watcher)
   }
