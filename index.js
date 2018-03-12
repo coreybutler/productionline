@@ -207,7 +207,7 @@ class Builder extends EventEmitter {
           return console.log(`args[0] flag does not have a valid function associated with it.`)
         }
 
-        cfg.commands[args[0]](args)
+        cfg.commands[args[0]].apply(this, args)
       }
     }
   }
