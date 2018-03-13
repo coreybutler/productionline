@@ -306,6 +306,17 @@ class Builder extends EventEmitter {
   }
 
   /**
+   * @property {Boolean}
+   * @readonly
+   * Indicates the builder is in "watch" mode (monitoring the file system)
+   */
+  get monitoring () {
+    return this.LOCAL_MONITOR !== null
+  }
+
+  /**
+   * @property {array}
+   * @readonly
    * Returns the CLI arguments passed to the builder.
    */
   get cliarguments () {
@@ -664,7 +675,10 @@ class Builder extends EventEmitter {
     })
 
     // "Before" tasks are applied in the constructor.
-    this.cli()
+    if (!this.monitoring) {
+      this.cli()
+    }
+
     this.after()
 
     this.tasks.run(sequential)
