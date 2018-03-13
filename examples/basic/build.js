@@ -16,16 +16,10 @@ const builder = new Builder({
       builder.source = path.resolve('./src')
       builder.assets = path.resolve('./assets') // Relative to source!
       builder.destination = path.resolve('./dist')
-
-      // Queue the built-in build process.
-      builder.run()
     },
 
     '--dev': () => {
-      // Build the project first
-      builder.run()
-
-      // Monitor for changes
+      // Monitor for changes.
       builder.watch((action, filepath) => {
         switch (action) {
           case 'create':
@@ -50,3 +44,6 @@ const builder = new Builder({
     }
   }
 })
+
+// Run the build process.
+builder.run()
