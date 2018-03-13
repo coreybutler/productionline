@@ -40,11 +40,11 @@ const builder = new ProductionLine({
         // Do something
         next()
       })
-
-      builder.run()
     }
   }
 })
+
+builder.run()
 ```
 
 In the `package.json` file, add an npm command like:
@@ -74,6 +74,16 @@ Basic ES 2016 class extension is the easiest way to create a custom build tool. 
      super()
    }
 
+   // These tasks run before any others.
+   before () {
+     this.tasks.add('Custom Preprocessing Step', next => { ... })
+   }
+
+   // These tasks run after all others.
+   after () {
+     this.tasks.add('Custom Postprocessing Step', next => { ... })
+   }
+
    make () {
      this.addStep('Custom step', (next) => {
        // Do something
@@ -95,7 +105,7 @@ Basic ES 2016 class extension is the easiest way to create a custom build tool. 
    }
  }
 
- const builder = new ProductionLine({
+ const builder = new CustomBuilder({
    commands: {
      '--make': () => {
        console.log('Running Build Process:')
