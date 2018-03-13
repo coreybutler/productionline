@@ -28,3 +28,33 @@ test('Basic Build', function (t) {
 
   builder.run()
 })
+
+test('Basic Extension', function (t) {
+  let ct = 0
+
+  class Builder extends ProductionLine {
+    before () {
+      this.addTask('PreStep 1', () => ct++)
+    }
+
+    after () {
+      this.addTask('PostStep 1', () => ct++)
+    }
+  }
+
+  let builder = new Builder()
+
+  builder.addTask('Step A', () => ct++)
+  builder.addTask('Step B', () => ct++)
+  builder.addTask('Step C', next => setTimeout(() => {
+    ct++
+    next()
+  }, 600))
+
+  builder.on('complete', () => {
+    t.ok(ct === 5, 'Before/After steps processed successfully.')
+    t.end()
+  })
+
+  builder.run()
+})

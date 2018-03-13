@@ -184,6 +184,20 @@ class Builder extends EventEmitter {
         value: null
       },
 
+      COMMANDS: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: cfg.commands || null
+      },
+
+      CLI_ARGUMENTS: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: null
+      },
+
       /**
        * @property {Class} TaskRunner
        * A [Shortbus](https://github.com/coreybutler/shortbus) task runner.
@@ -198,18 +212,7 @@ class Builder extends EventEmitter {
 
     this.prepareBuild()
 
-    // Support commands
-    let args = process.argv.slice(2)
-
-    if (args.length > 0 && cfg.hasOwnProperty('commands')) {
-      if (cfg.commands.hasOwnProperty(args[0])) {
-        if (typeof cfg.commands[args[0]] !== 'function') {
-          return console.log(`args[0] flag does not have a valid function associated with it.`)
-        }
-
-        cfg.commands[args[0]].apply(this, args)
-      }
-    }
+    this.before()
   }
 
   get package () {
@@ -300,6 +303,13 @@ class Builder extends EventEmitter {
    */
   get monitor () {
     return this.LOCAL_MONITOR
+  }
+
+  /**
+   * Returns the CLI arguments passed to the builder.
+   */
+  get cliarguments () {
+    return this.CLI_ARGUMENTS
   }
 
   /**
@@ -570,6 +580,32 @@ class Builder extends EventEmitter {
     this.tasks.add(...arguments)
   }
 
+  cli () {
+    // Support commands
+    let args = process.argv.slice(2)
+    this.CLI_ARGUMENTS = args
+
+    if (args.length > 0 && this.COMMANDS !== null) {
+      if (this.COMMANDS.hasOwnProperty(args[0])) {
+        if (typeof this.COMMANDS[args[0]] !== 'function') {
+          return console.log(`${args[0]} flag does not have a valid function associated with it.`)
+        }
+
+        this.COMMANDS[args[0]].apply(this, args)
+      }
+    }
+  }
+
+  /**
+   * An overridable method that can be used to add tasks before all other tasks.
+   */
+  before () {}
+
+  /**
+   * An overridable method that can be used to add tasks after all other tasks.
+   */
+  after () {}
+
   /**
    * Run the all of the tasks in the production/assembly line.
    * @param  {Boolean} [sequential=true]
@@ -626,6 +662,10 @@ class Builder extends EventEmitter {
       // Trigger the completion event.
       this.emit('complete')
     })
+
+    // "Before" tasks are applied in the constructor.
+    this.cli()
+    this.after()
 
     this.tasks.run(sequential)
   }
