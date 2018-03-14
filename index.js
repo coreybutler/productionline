@@ -324,6 +324,13 @@ class Builder extends EventEmitter {
   }
 
   /**
+   * Empty the output directory.
+   */
+  clean () {
+    fs.emptyDir(this.OUTPUT)
+  }
+
+  /**
    * This adds directories and/or files to the list of ignored files,
    * where as setting the ignore property overrides the whole list.
    * @param  {String|Array} paths
