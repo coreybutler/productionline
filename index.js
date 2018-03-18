@@ -207,6 +207,13 @@ class Builder extends EventEmitter {
         configurable: false,
         writable: false,
         value: TaskRunner
+      },
+
+      minimatch: {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: minimatch
       }
     })
 
