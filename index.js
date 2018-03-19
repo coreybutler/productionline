@@ -134,13 +134,13 @@ class Builder extends EventEmitter {
             ui.div({
               text: this.COLORS.info(`Running ${localpackage.name} v${localpackage.version} for ${this.PKG.name}`),
               border: false,
-              padding: [1, 0, 1, 2]
+              padding: [1, 0, 1, 5]
             })
 
             ui.div({
               text: chalk.bold('Source:'),
               width,
-              padding: [0, 0, 0, 2]
+              padding: [0, 0, 0, 5]
             }, {
               text: this.SOURCE
             })
@@ -148,7 +148,7 @@ class Builder extends EventEmitter {
             ui.div({
               text: chalk.bold('Output:'),
               width,
-              padding: [0, 0, 0, 2]
+              padding: [0, 0, 0, 5]
             }, {
               text: this.OUTPUT
             })
@@ -156,7 +156,7 @@ class Builder extends EventEmitter {
             ui.div({
               text: chalk.bold('Assets:'),
               width,
-              padding: [0, 0, 0, 2]
+              padding: [0, 0, 0, 5]
             }, {
               text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
             })
@@ -164,7 +164,7 @@ class Builder extends EventEmitter {
             ui.div({
               text: this.COLORS.subtle('Ignored:'),
               width,
-              padding: [1, 0, 1, 2]
+              padding: [1, 0, 1, 5]
             }, {
               text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
               padding: [1, 0, 1, 0]
@@ -720,6 +720,7 @@ class Builder extends EventEmitter {
       setTimeout(() => {
         this.LOCAL_MONITOR = new Monitor(this, callback)
         this.emit('watch', this.LOCAL_MONITOR)
+        this.verysubtle(`     > Monitoring ${this.SOURCE} for changes. Press ctrl+c to exit.`)
       }, 100)
     }
   }
