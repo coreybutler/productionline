@@ -198,6 +198,13 @@ class Builder extends EventEmitter {
         value: null
       },
 
+      CURRENT_STEP: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: 0
+      },
+
       /**
        * @property {Class} TaskRunner
        * A [Shortbus](https://github.com/coreybutler/shortbus) task runner.
@@ -641,52 +648,57 @@ class Builder extends EventEmitter {
    * option is here specifically for build pipelines that are designed for
    * parallel processing.
    */
+  stepStarted (step) {
+    this.CURRENT_STEP++
+
+    let ui = new CLITable()
+
+    ui.div({
+      text: this.CURRENT_STEP,
+      width: 3,
+      padding: [0, 0, 0, 2]
+    }, {
+      text: ')',
+      width: 2
+    }, {
+      text: this.COLORS.log(`${step.name}`)
+    })
+
+    console.log(ui.toString())
+
+    this.emit('step.started', step)
+  }
+
+  complete (callback) {
+    let ui = new CLITable()
+
+    ui.div({
+      text: this.COLORS.log('Complete.'),
+      padding: [1, 2, 1, 2]
+    })
+
+    console.log(ui.toString())
+
+    // Fire the callback if it exists
+    callback && callback()
+
+    // Trigger the completion event.
+    this.emit('complete')
+
+    this.tasks.removeAllListeners()
+  }
+
   run (sequential = true, callback) {
     if (typeof sequential === 'function') {
       callback = sequential
       sequential = true
     }
 
-    let counter = 0
-    this.tasks.on('stepstarted', step => {
-      counter++
+    this.CURRENT_STEP = 0
 
-      let ui = new CLITable()
-
-      ui.div({
-        text: counter,
-        width: 3,
-        padding: [0, 0, 0, 2]
-      }, {
-        text: ')',
-        width: 2
-      }, {
-        text: this.COLORS.log(`${step.name}`)
-      })
-
-      console.log(ui.toString())
-
-      this.emit('step.started', step)
-    })
-
+    this.tasks.on('stepstarted', step => this.stepStarted(step))
     this.tasks.on('stepcompleted', step => this.emit('step.complete', step))
-
-    this.tasks.on('complete', () => {
-      let ui = new CLITable()
-
-      ui.div({
-        text: this.COLORS.log('Complete.'),
-        padding: [1, 2, 1, 2]
-      })
-
-      console.log(ui.toString())
-
-      // Fire the callback if it exists
-      callback && callback()
-
-      // Trigger the completion event.
-      this.emit('complete')
-    })
+    this.tasks.on('complete', () => this.complete(callback))
 
     // "Before" tasks are applied in the constructor.
     if (!this.monitoring) {
