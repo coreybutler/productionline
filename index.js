@@ -720,7 +720,7 @@ class Builder extends EventEmitter {
       setTimeout(() => {
         this.LOCAL_MONITOR = new Monitor(this, callback)
         this.emit('watch', this.LOCAL_MONITOR)
-        setTimeout(() => this.highlight(`Monitoring ${this.SOURCE} for changes. Press ctrl+c to exit.`), 600)
+        setTimeout(() => this.verysubtle(`  Monitoring ${this.SOURCE} for changes. Press ctrl+c to exit.`), 600)
       }, 100)
     }
   }
