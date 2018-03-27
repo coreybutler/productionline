@@ -28,9 +28,30 @@ class Builder extends EventEmitter {
     /**
      * @cfg {string} [header]
      * A standard header to be applied to files.
-     * Defaults to "Copyright (c) <DATE> <AUTHOR>. All Rights Reserved.\nVersion X.X.X built on <DATE>."
+     * Defaults to
+     * ```sh
+     * Copyright (c) <DATE> <AUTHOR> and contributors. All Rights Reserved.
+     * Version X.X.X built on <DATE>.
+     * ```
+     * If a project name is available in the local package.json, this will default to:
+     *
+     * ```
+     * <PROJECT NAME> vX.X.X generated on <DATE>.
+     * Copyright (c) <DATE> <AUTHOR> and contributors. All Rights Reserved.
+     * [LICENSE: <LICENSE TEXT>]
+     * ```
+     * _Notice the optional license._ If a license is supplied in the package.json,
+     * the it will be applied to the header. This only applies the name of the license
+     * (as i.e. license attribute of package.json). It does not read a license file
+     * into the header.
      */
-    this.HEADER = cfg.header || `Copyright (c) ${(new Date()).getFullYear()} ${this.author}. All Rights Reserved.\nVersion ${this.version} built on ${new Date().toDateString()}.`
+    this.HEADER = cfg.header || `Copyright (c) ${(new Date()).getFullYear()} ${this.author} and contributors. All Rights Reserved.${this.package.hasOwnProperty('license') ? '\nLICENSE: ' + this.package.license : ''}`
+
+    if (this.name !== 'Untitled') {
+      this.HEADER = `${this.name} v${this.version} generated on ${(new Date().toDateString())}.\n` + this.HEADER
+    } else {
+      this.HEADER = `${this.HEADER}\nVersion ${this.version} built on ${(new Date().toDateString())}.`
+    }
 
     /**
      * @cfg {string} [footer]
@@ -253,6 +274,14 @@ class Builder extends EventEmitter {
     return this.PKG.author.name
   }
 
+  get name () {
+    if (this.PKG.hasOwnProperty('name')) {
+      return this.PKG.name
+    }
+
+    return 'Untitled'
+  }
+
   get version () {
     return this.APPVERSION
   }
@@ -280,11 +309,19 @@ class Builder extends EventEmitter {
   }
 
   set source (value) {
-    this.SOURCE = value
+    let newpath = path.resolve(value)
+
+    try {
+      fs.accessSync(newpath, fs.constants.R_OK)
+    } catch (e) {
+      this.warn(`SOURCE DIRECTORY NOT FOUND: "${newpath}"`)
+    }
+
+    this.SOURCE = newpath
   }
 
   set destination (value) {
-    this.OUTPUT = value
+    this.OUTPUT = path.resolve(value)
   }
 
   get destination () {
@@ -293,6 +330,10 @@ class Builder extends EventEmitter {
 
   set assets (value) {
     this.ASSETS = value
+  }
+
+  get assets () {
+    return this.ASSETS
   }
 
   get Table () {
@@ -631,7 +672,25 @@ class Builder extends EventEmitter {
   /**
    * An overridable method that can be used to add tasks before all other tasks.
    */
-  before () {}
+  before () {
+    // Validate source
+    try {
+      fs.accessSync(this.SOURCE, fs.constants.F_OK)
+    } catch (e) {
+      this.failure(`  CANNOT FIND SOURCE DIRECTORY: "${this.SOURCE}"`)
+    }
+
+    // Validate assets
+    this.ASSETS.forEach((assetDirectory, i) => {
+      this.ASSETS[i] = path.resolve(assetDirectory)
+
+      try {
+        fs.accessSync(this.ASSETS[i], fs.constants.F_OK)
+      } catch (e) {
+        this.warn(`  CANNOT FIND ASSET DIRECTORY: "${this.ASSETS[i]}"`)
+      }
+    })
+  }
 
   /**
    * An overridable method that can be used to add tasks after all other tasks.
@@ -732,7 +791,7 @@ class Builder extends EventEmitter {
       setTimeout(() => {
         this.LOCAL_MONITOR = new Monitor(this, callback)
         this.emit('watch', this.LOCAL_MONITOR)
-        setTimeout(() => this.verysubtle(`  Monitoring ${this.SOURCE} for changes. Press ctrl+c to exit.`), 600)
+        setTimeout(() => this.verysubtle(`  Monitoring ${this.SOURCE} for changes. Press ctrl+c to exit.\n`), 600)
       }, 100)
     }
   }

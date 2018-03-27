@@ -14,6 +14,10 @@ test('Basic Build', function (t) {
   let builder = new ProductionLine()
   let ct = 0
 
+  builder.assets = [] // No assets in the test.
+  builder.source = './'
+  console.log(builder.source)
+
   builder.addTask('Step A', () => ct++)
   builder.addTask('Step B', () => ct++)
   builder.addTask('Step C', next => setTimeout(() => {
