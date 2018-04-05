@@ -674,22 +674,24 @@ class Builder extends EventEmitter {
    */
   before () {
     // Validate source
-    try {
-      fs.accessSync(this.SOURCE, fs.constants.F_OK)
-    } catch (e) {
-      this.failure(`  CANNOT FIND SOURCE DIRECTORY: "${this.SOURCE}"`)
-    }
-
-    // Validate assets
-    this.ASSETS.forEach((assetDirectory, i) => {
-      this.ASSETS[i] = path.resolve(assetDirectory)
-
+    if (this.SOURCE !== null && this.SOURCE.length > 0) {
       try {
-        fs.accessSync(this.ASSETS[i], fs.constants.F_OK)
+        fs.accessSync(this.SOURCE, fs.constants.F_OK)
       } catch (e) {
-        this.warn(`  CANNOT FIND ASSET DIRECTORY: "${this.ASSETS[i]}"`)
+        this.failure(`  CANNOT FIND SOURCE DIRECTORY: "${this.SOURCE}"`)
       }
-    })
+
+      // Validate assets
+      this.ASSETS.forEach((assetDirectory, i) => {
+        this.ASSETS[i] = path.resolve(assetDirectory)
+
+        try {
+          fs.accessSync(this.ASSETS[i], fs.constants.F_OK)
+        } catch (e) {
+          this.warn(`  CANNOT FIND ASSET DIRECTORY: "${this.ASSETS[i]}"`)
+        }
+      })
+    }
   }
 
   /**

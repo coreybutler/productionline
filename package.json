@@ -1,6 +1,6 @@
 {
   "name": "productionline",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "An extendable class for creating common build pipelines.",
   "main": "index.js",
   "scripts": {
