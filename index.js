@@ -674,14 +674,14 @@ class Builder extends EventEmitter {
    */
   before () {
     // Validate source
-    if (this.SOURCE !== null && this.SOURCE.length > 0) {
-      try {
-        fs.accessSync(this.SOURCE, fs.constants.F_OK)
-      } catch (e) {
-        this.failure(`  CANNOT FIND SOURCE DIRECTORY: "${this.SOURCE}"`)
-      }
+    try {
+      fs.accessSync(this.SOURCE, fs.constants.F_OK)
+    } catch (e) {
+      this.failure(`  CANNOT FIND SOURCE DIRECTORY: "${this.SOURCE}"`)
+    }
 
-      // Validate assets
+    // Validate assets
+    if (this.ASSETS !== null && this.ASSETS.length > 0) {
       this.ASSETS.forEach((assetDirectory, i) => {
         this.ASSETS[i] = path.resolve(assetDirectory)
 
