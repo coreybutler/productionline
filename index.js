@@ -924,18 +924,18 @@ class Builder extends EventEmitter {
 
     ui.div({
       text: chalk.bold(this.COLORS.info(`${report.name} v${report.version} Execution Report`.toUpperCase())),
-      padding: [2, 0, 0, 5]
+      padding: [1, 0, 0, 3]
     })
 
     ui.div({
       text: this.COLORS.verysubtle(`Ran ${report.taskCount} task${report.taskCount !== 1 ? 's' : ''} for ${report.duration} seconds (from ${report.start.toLocaleTimeString()} to ${report.end.toLocaleTimeString()}).`),
-      padding: [0, 0, 1, 5]
+      padding: [0, 0, 1, 3]
     })
 
     ui.div({
       text: 'Source:',
       width,
-      padding: [0, 0, 0, 5]
+      padding: [0, 0, 0, 3]
     }, {
       text: this.SOURCE
     })
@@ -943,7 +943,7 @@ class Builder extends EventEmitter {
     ui.div({
       text: 'Output:',
       width,
-      padding: [0, 0, 0, 5]
+      padding: [0, 0, 0, 3]
     }, {
       text: this.OUTPUT
     })
@@ -951,7 +951,7 @@ class Builder extends EventEmitter {
     ui.div({
       text: 'Assets:',
       width,
-      padding: [0, 0, 0, 5]
+      padding: [0, 0, 0, 3]
     }, {
       text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
     })
@@ -959,7 +959,7 @@ class Builder extends EventEmitter {
     ui.div({
       text: this.COLORS.subtle('Ignored:'),
       width,
-      padding: [1, 0, 1, 5]
+      padding: [1, 0, 1, 3]
     }, {
       text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
       padding: [1, 0, 1, 0]
@@ -967,20 +967,20 @@ class Builder extends EventEmitter {
 
     ui.div({
       text: chalk.bold(this.COLORS.info('TASK EXECUTION SUMMARY:')),
-      padding: [1, 0, 0, 5]
+      padding: [1, 0, 0, 3]
     })
 
     let sigfigs = this.minSignificantFigures.apply(this, report.tasks.map(step => step.duration))
-    sigfigs = sigfigs < 3 ? 3 : sigfigs
+    sigfigs = sigfigs < 2 ? 2 : sigfigs
 
     report.tasks.forEach(step => {
       let duration = step.duration
 
       ui.div({
         text: step.number,
-        width: 8,
+        width: 5 + (report.tasks.length > 100 ? 3 : (report.tasks.length > 9 ? 2 : 1)),
         align: 'right',
-        padding: [1, 0, 1, 5]
+        padding: [1, 0, 1, 3]
       },{
         text: ')',
         width: 2,
@@ -992,11 +992,11 @@ class Builder extends EventEmitter {
       }, {
         text: this.COLORS[duration > 5 ? (duration > 10 ? (duration > 20 ? 'highlight' : 'warn') : 'subtle') : 'verysubtle'](`${this.round(duration, sigfigs)} seconds.`),
         width: 20,
-        padding: [1, 0, 1, 5]
+        padding: [1, 0, 1, 3]
       })
     })
 
-    console.log(ui.toString())
+    console.log(ui.toString() + '\n\n')
   }
 
   get report () {
