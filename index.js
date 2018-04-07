@@ -967,7 +967,6 @@ class Builder extends EventEmitter {
 
     ui.div({
       text: chalk.bold(this.COLORS.info('Build Tasks:')),
-      30,
       padding: [0, 0, 1, 5]
     })
 
