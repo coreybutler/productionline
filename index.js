@@ -882,26 +882,28 @@ class Builder extends EventEmitter {
    * parallel processing.
    */
   stepStarted (step) {
-    this.CURRENT_STEP++
+    if (step.name !== '::EXECUTIONREPORT::') {
+      this.CURRENT_STEP++
 
-    let ui = new CLITable()
+      let ui = new CLITable()
 
-    ui.div({
-      text: this.CURRENT_STEP,
-      width: 3,
-      padding: [0, 0, 0, 2]
-    }, {
-      text: ')',
-      width: 2
-    }, {
-      text: this.COLORS.log(`${step.name}`)
-    })
+      ui.div({
+        text: this.CURRENT_STEP,
+        width: 3,
+        padding: [0, 0, 0, 2]
+      }, {
+        text: ')',
+        width: 2
+      }, {
+        text: this.COLORS.log(`${step.name}`)
+      })
 
-    console.log(ui.toString())
+      console.log(ui.toString())
 
-    this.startTime(step.name || `STEP ${step.number}`)
+      this.startTime(step.name || `STEP ${step.number}`)
 
-    this.emit('step.started', step)
+      this.emit('step.started', step)
+    }
   }
 
   complete (callback) {
@@ -973,19 +975,21 @@ class Builder extends EventEmitter {
     this.tasks.on('stepstarted', step => this.stepStarted(step))
 
     this.tasks.on('stepcomplete', step => {
-      let label = step.name || `STEP ${step.number}`
-      let timer = this.TIMER.markers.get(label)
-      let duration = timer.duration
+      if (step.name !== '::EXECUTIONREPORT::') {
+        let label = step.name || `STEP ${step.number}`
+        let timer = this.TIMER.markers.get(label)
+        let duration = timer.duration
 
-      this.REPORT.push({
-        label,
-        number: step.number,
-        start: timer.start,
-        end: new Date(timer.start.getTime() + (duration * 1000)),
-        duration
-      })
+        this.REPORT.push({
+          label,
+          number: step.number,
+          start: timer.start,
+          end: new Date(timer.start.getTime() + (duration * 1000)),
+          duration
+        })
 
-      this.emit('step.complete', step)
+        this.emit('step.complete', step)
+      }
     })
 
     this.tasks.on('complete', () => this.complete(callback))
@@ -997,7 +1001,7 @@ class Builder extends EventEmitter {
 
     this.after()
 
-    this.tasks.add('Build Report', () => {
+    this.tasks.add('::EXECUTIONREPORT::', () => {
       this.TIMER.total = this.timeSince('::PRODUCTIONLINE_START::')
       this.verysubtle(`\n  Process completed in ${this.TIMER.total} seconds.\n\n`)
     })
