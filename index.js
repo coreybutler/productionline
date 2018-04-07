@@ -978,7 +978,7 @@ class Builder extends EventEmitter {
 
       ui.div({
         text: step.number,
-        width: 5 + (report.tasks.length > 100 ? 3 : (report.tasks.length > 9 ? 2 : 1)),
+        width: 3 + (report.tasks.length > 99 ? 3 : (report.tasks.length > 9 ? 2 : 1)),
         align: 'right',
         padding: [1, 0, 1, 3]
       },{
