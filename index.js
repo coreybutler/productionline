@@ -962,12 +962,12 @@ class Builder extends EventEmitter {
       padding: [1, 0, 1, 5]
     }, {
       text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
-      padding: [1, 0, 1, 5]
+      padding: [1, 0, 1, 0]
     })
 
     ui.div({
-      text: chalk.bold(this.COLORS.info('Build Tasks:')),
-      padding: [0, 0, 1, 5]
+      text: chalk.bold(this.COLORS.info('BUILD TASKS:')),
+      padding: [1, 0, 0, 5]
     })
 
     let sigfigs = this.minSignificantFigures.apply(this, report.tasks.map(step => step.duration))
@@ -975,12 +975,12 @@ class Builder extends EventEmitter {
 
     report.tasks.forEach(step => {
       ui.div({
-        text: step.number,
-        width: 3,
+        text: step.number + ')',
+        width: 4,
         align: 'right',
-        padding: [1, 0, 1, 5]
+        padding: [1, 1, 1, 5]
       }, {
-        text: ') ' + step.label,
+        text: step.label,
         width: 35,
         padding: [1, 0, 1, 0]
       }, {
