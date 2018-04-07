@@ -66,6 +66,10 @@ class FileManager {
     return this.PRIVATE.linecount || 0
   }
 
+  get filename () {
+    return path.basename(this.PRIVATE.filepath)
+  }
+
   readSync () {
     return fs.readFileSync(this.PRIVATE.filepath).toString()
   }
@@ -78,7 +82,7 @@ class FileManager {
     return this.lines[number]
   }
 
-  getLines (start, end) {
+  getSnippet (start, end) {
     let snippet = []
 
     for (let i = start; i <= end; i++) {
