@@ -974,17 +974,23 @@ class Builder extends EventEmitter {
     sigfigs = sigfigs < 3 ? 3 : sigfigs
 
     report.tasks.forEach(step => {
+      let duration = step.duration
+
       ui.div({
-        text: step.number + ')',
-        width: 4,
+        text: step.number,
+        width: 8,
         align: 'right',
         padding: [1, 0, 1, 5]
+      },{
+        text: ')',
+        width: 2,
+        padding: [1, 1, 0, 0]
       }, {
         text: chalk.bold(step.label),
         width: 45,
-        padding: [1, 0, 1, 1]
+        padding: [1, 0, 1, 0]
       }, {
-        text: this.COLORS.subtle(`${this.round(step.duration, sigfigs)} seconds.`),
+        text: this.COLORS[duration > 5 ? (duration > 10 ? (duration > 20 ? 'highlight' : 'warn') : 'subtle') : 'verysubtle'](`${this.round(duration, sigfigs)} seconds.`),
         width: 20,
         padding: [1, 0, 1, 5]
       })
