@@ -244,10 +244,6 @@ class Builder extends EventEmitter {
         value: minimatch
       }
     })
-
-    this.prepareBuild()
-
-    this.before()
   }
 
   get package () {
@@ -754,6 +750,10 @@ class Builder extends EventEmitter {
       callback = sequential
       sequential = true
     }
+
+    this.prepareBuild()
+
+    this.before()
 
     this.CURRENT_STEP = 0
 
