@@ -928,12 +928,12 @@ class Builder extends EventEmitter {
     })
 
     ui.div({
-      text: this.COLORS.subtle(`Ran ${report.taskCount} task${report.taskCount !== 1 ? 's' : ''} for ${report.duration} seconds (from ${report.start.toLocaleTimeString()} to ${report.end.toLocaleTimeString()}).`),
+      text: this.COLORS.verysubtle(`Ran ${report.taskCount} task${report.taskCount !== 1 ? 's' : ''} for ${report.duration} seconds (from ${report.start.toLocaleTimeString()} to ${report.end.toLocaleTimeString()}).`),
       padding: [0, 0, 1, 5]
     })
 
     ui.div({
-      text: chalk.bold('Source:'),
+      text: 'Source:',
       width,
       padding: [0, 0, 0, 5]
     }, {
@@ -941,7 +941,7 @@ class Builder extends EventEmitter {
     })
 
     ui.div({
-      text: chalk.bold('Output:'),
+      text: 'Output:',
       width,
       padding: [0, 0, 0, 5]
     }, {
@@ -949,7 +949,7 @@ class Builder extends EventEmitter {
     })
 
     ui.div({
-      text: chalk.bold('Assets:'),
+      text: 'Assets:',
       width,
       padding: [0, 0, 0, 5]
     }, {
@@ -966,7 +966,7 @@ class Builder extends EventEmitter {
     })
 
     ui.div({
-      text: chalk.bold(this.COLORS.info('BUILD TASKS:')),
+      text: chalk.bold(this.COLORS.info('TASK EXECUTION SUMMARY:')),
       padding: [1, 0, 0, 5]
     })
 
@@ -978,14 +978,14 @@ class Builder extends EventEmitter {
         text: step.number + ')',
         width: 4,
         align: 'right',
-        padding: [1, 1, 1, 5]
+        padding: [1, 0, 1, 5]
       }, {
-        text: step.label,
-        width: 35,
-        padding: [1, 0, 1, 0]
+        text: chalk.bold(step.label),
+        width: 45,
+        padding: [1, 0, 1, 1]
       }, {
-        text: this.COLORS.subtle(`Ran for ${this.round(step.duration, sigfigs)} seconds.`),
-        width: 30,
+        text: this.COLORS.subtle(`${this.round(step.duration, sigfigs)} seconds.`),
+        width: 20,
         padding: [1, 0, 1, 5]
       })
     })
