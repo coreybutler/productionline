@@ -305,7 +305,12 @@ class Builder extends EventEmitter {
   }
 
   set source (value) {
+    let oldpath = this.SOURCE
     let newpath = path.resolve(value)
+
+    if (oldpath === newpath) {
+      return
+    }
 
     try {
       fs.accessSync(newpath, fs.constants.R_OK)
@@ -314,6 +319,35 @@ class Builder extends EventEmitter {
     }
 
     this.SOURCE = newpath
+    this.emit('source.updated', {
+      old: oldpath,
+      new: newpath
+    })
+  }
+
+  get output () {
+    return this.OUTPUT
+  }
+
+  set output (value) {
+    let oldpath = this.OUTPUT
+    let newpath = path.resolve(value)
+
+    if (oldpath === newpath) {
+      return
+    }
+
+    try {
+      fs.accessSync(newpath, fs.constants.R_OK)
+    } catch (e) {
+      this.warn(`OUTPUT DIRECTORY NOT FOUND: "${newpath}"`)
+    }
+
+    this.OUTPUT = newpath
+    this.emit('output.updated', {
+      old: oldpath,
+      new: newpath
+    })
   }
 
   set destination (value) {
