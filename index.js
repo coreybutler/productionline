@@ -9,6 +9,86 @@ const localpackage = require('./package.json')
 const Monitor = require('./Monitor')
 const EventEmitter = require('events').EventEmitter
 
+class FileManager {
+  constructor (filepath) {
+    Object.defineProperties(this, {
+      PRIVATE: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: {
+          filepath,
+          content: null,
+          lines: null,
+          linecount: null
+        }
+      }
+    })
+
+    // Make sure the file is readable
+    fs.accessSync(filepath, fs.constants.R_OK)
+  }
+
+  set content (value) {
+    this.PRIVATE.content = value
+    this.lines = null
+    this.linecount = null
+  }
+
+  get content () {
+    if (this.PRIVATE.content === null) {
+      this.PRIVATE.content = this.readSync()
+    }
+
+    return this.PRIVATE.content
+  }
+
+  get lines () {
+    if (this.PRIVATE.lines === null) {
+      this.PRIVATE.lines = {}
+
+      let lines = this.content.split(/\r|\n/)
+      lines.forEach((content, line) => {
+        this.PRIVATE.lines[line + 1] = content
+      })
+
+      this.PRIVATE.linecount = lines.length
+    }
+
+    return this.PRIVATE.lines
+  }
+
+  get lineCount () {
+    if (this.PRIVATE.linecount === null) {
+      let lines = this.lines // eslint-disable-line
+    }
+
+    return this.PRIVATE.linecount || 0
+  }
+
+  readSync () {
+    return fs.readFileSync(this.PRIVATE.filepath).toString()
+  }
+
+  read () {
+    fs.readFile(this.PRIVATE.filepath, ...arguments)
+  }
+
+  getLine (number) {
+    return this.lines[number]
+  }
+
+  getLines (start, end) {
+    let snippet = []
+
+    for (let i = start; i <= end; i++) {
+      snippet.push(this.lines[i])
+    }
+
+    return snippet.join('\n')
+  }
+}
+
 /**
  * @class ProductionLine.Builder
  * A queueing and execution system.
@@ -423,6 +503,10 @@ class Builder extends EventEmitter {
    */
   get cliarguments () {
     return this.CLI_ARGUMENTS
+  }
+
+  get File () {
+    return FileManager
   }
 
   /**
@@ -981,7 +1065,7 @@ class Builder extends EventEmitter {
         width: 3 + (report.tasks.length > 99 ? 3 : (report.tasks.length > 9 ? 2 : 1)),
         align: 'right',
         padding: [1, 0, 1, 3]
-      },{
+      }, {
         text: ')',
         width: 2,
         padding: [1, 1, 0, 0]
@@ -990,7 +1074,7 @@ class Builder extends EventEmitter {
         width: 45,
         padding: [1, 0, 1, 0]
       }, {
-        text: this.COLORS[duration > 5 ? (duration > 10 ? (duration > 20 ? 'highlight' : 'warn') : 'subtle') : 'verysubtle'](`${this.round(duration, sigfigs)} seconds.`),
+        text: this.COLORS[duration > 2 ? (duration > 10 ? (duration > 20 ? 'highlight' : 'warn') : 'subtle') : 'verysubtle'](`${this.round(duration, sigfigs)} seconds.`),
         width: 20,
         padding: [1, 0, 1, 3]
       })
