@@ -62,3 +62,16 @@ test('Basic Extension', function (t) {
 
   builder.run()
 })
+
+test('Basic Timer', function (t) {
+  let builder = new ProductionLine()
+
+  builder.addTask('test', next => setTimeout(next, 2000))
+
+  builder.on('complete', () => {
+    t.ok(builder.TIMER.total > 2, 'Timer returns a correct value.')
+    t.end()
+  })
+
+  builder.run()
+})

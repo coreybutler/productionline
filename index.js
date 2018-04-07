@@ -226,6 +226,23 @@ class Builder extends EventEmitter {
         value: 0
       },
 
+      TIMER: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: {
+          total: null,
+          markers: new Map()
+        }
+      },
+
+      REPORT: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: []
+      },
+
       /**
        * @property {Class} TaskRunner
        * A [Shortbus](https://github.com/coreybutler/shortbus) task runner.
@@ -351,7 +368,7 @@ class Builder extends EventEmitter {
   }
 
   set destination (value) {
-    this.OUTPUT = path.resolve(value)
+    this.output = path.resolve(value)
   }
 
   get destination () {
@@ -406,6 +423,39 @@ class Builder extends EventEmitter {
    */
   get cliarguments () {
     return this.CLI_ARGUMENTS
+  }
+
+  /**
+   * A rounding method (like Math.round) that rounds to
+   * a specific number of decimal points.
+   * @param  {number} number
+   * A float (decimal) number.
+   * @param  {number} precision
+   * The number of decimal places.
+   * @return {number}
+   */
+  round (number, precision) {
+    const factor = Math.pow(10, precision)
+    return Math.round(number * factor) / factor
+  }
+
+  // Returns the minimum number decimal places required to
+  // show a non-zero result.
+  minSignificantFigures () {
+    let min = 0
+
+    for (let i = 0; i < arguments.length; i++) {
+      let value = Math.abs(arguments[i]).toString().split('.').pop()
+
+      for (let x = 0; x < value.length; x++) {
+        if (value.charAt(x) !== '0') {
+          min = x > min ? x : min
+          break
+        }
+      }
+    }
+
+    return min + 1
   }
 
   /**
@@ -535,6 +585,10 @@ class Builder extends EventEmitter {
    * The corresponding output path.
    */
   outputDirectory (inputFilepath) {
+    if (path.resolve(inputFilepath) !== inputFilepath) {
+      inputFilepath = path.join(this.OUTPUT, inputFilepath)
+    }
+
     return inputFilepath.replace(this.SOURCE, this.OUTPUT)
   }
 
@@ -757,6 +811,8 @@ class Builder extends EventEmitter {
 
     console.log(ui.toString())
 
+    this.startTime(step.name || `STEP ${step.number}`)
+
     this.emit('step.started', step)
   }
 
@@ -779,6 +835,39 @@ class Builder extends EventEmitter {
     this.tasks.removeAllListeners()
   }
 
+  startTimer () {
+    this.startTime('::PRODUCTIONLINE_START::')
+  }
+
+  startTime (label) {
+    if (!label || (typeof label !== 'string' && typeof label !== 'number')) {
+      throw new Error('startTime method requires a label argument.')
+    }
+
+    this.TIMER.markers.set(label, {
+      start: new Date(),
+      mark: process.hrtime(),
+      get end () {
+        return new Date(this.start.getTime() + (this.duration * 1000))
+      },
+      get duration () {
+        let diff = process.hrtime(this.mark)
+        // Convert nanoseconds to seconds
+        return ((diff[0] * 1e9) + diff[1]) / 1000000000 // 1000000 nanoseconds per millisecond
+      }
+    })
+  }
+
+  timeSince (label) {
+    let marker = this.TIMER.markers.get(label)
+
+    if (marker === null) {
+      throw new Error(`"${label}" does not exist in the timer.`)
+    }
+
+    return marker.duration
+  }
+
   run (sequential = true, callback) {
     if (typeof sequential === 'function') {
       callback = sequential
@@ -787,12 +876,30 @@ class Builder extends EventEmitter {
 
     this.prepareBuild()
 
+    this.startTimer()
+
     this.before()
 
     this.CURRENT_STEP = 0
 
     this.tasks.on('stepstarted', step => this.stepStarted(step))
-    this.tasks.on('stepcompleted', step => this.emit('step.complete', step))
+
+    this.tasks.on('stepcomplete', step => {
+      let label = step.name || `STEP ${step.number}`
+      let timer = this.TIMER.markers.get(label)
+      let duration = timer.duration
+
+      this.REPORT.push({
+        label,
+        number: step.number,
+        start: timer.start,
+        end: new Date(timer.start.getTime() + (duration * 1000)),
+        duration
+      })
+
+      this.emit('step.complete', step)
+    })
+
     this.tasks.on('complete', () => this.complete(callback))
 
     // "Before" tasks are applied in the constructor.
@@ -802,7 +909,113 @@ class Builder extends EventEmitter {
 
     this.after()
 
+    this.tasks.add('Build Report', () => {
+      this.TIMER.total = this.timeSince('::PRODUCTIONLINE_START::')
+      this.highlight(`   Process completed in ${this.TIMER.total} seconds.`)
+    })
+
     this.tasks.run(sequential)
+  }
+
+  displayReport () {
+    let report = this.report
+    let ui = new this.Table()
+    let width = 15
+
+    ui.div({
+      text: chalk.bold(this.COLORS.info(`${report.name} v${report.version} Execution Report`)),
+      width,
+      padding: [0, 0, 0, 5]
+    })
+
+    ui.div({
+      text: this.COLORS.info(`Ran ${report.taskCount} task${report.taskCount !== 1 ? 's' : ''} for ${report.duration} seconds (from ${report.start.toLocaleTimeString()} to ${report.end.toLocaleTimeString()}).`),
+      width,
+      padding: [0, 0, 1, 5]
+    })
+
+    ui.div({
+      text: chalk.bold('Source:'),
+      width,
+      padding: [0, 0, 0, 5]
+    }, {
+      text: this.SOURCE
+    })
+
+    ui.div({
+      text: chalk.bold('Output:'),
+      width,
+      padding: [0, 0, 0, 5]
+    }, {
+      text: this.OUTPUT
+    })
+
+    ui.div({
+      text: chalk.bold('Assets:'),
+      width,
+      padding: [0, 0, 0, 5]
+    }, {
+      text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
+    })
+
+    ui.div({
+      text: this.COLORS.subtle('Ignored:'),
+      width,
+      padding: [1, 0, 1, 5]
+    }, {
+      text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
+      padding: [1, 0, 1, 0]
+    })
+
+    ui.div({
+      text: chalk.bold(this.COLORS.info('Build Tasks:')),
+      width,
+      padding: [0, 0, 1, 5]
+    })
+
+    let sigfigs = this.minSignificantFigures.apply(this, report.tasks.map(step => step.duration))
+    sigfigs = sigfigs < 3 ? 3 : sigfigs
+
+    report.tasks.forEach(step => {
+      ui.div({
+        text: chalk.bold(step.number),
+        width: 3,
+        align: 'right',
+        padding: [1, 0, 1, 5]
+      }, {
+        text: chalk.bold(') ' + step.label),
+        width: 35,
+        padding: [1, 0, 1, 0]
+      }, {
+        text: this.COLORS.highlight(`Ran for ${this.round(step.duration, sigfigs)} seconds.`),
+        width: 30,
+        padding: [1, 0, 1, 5]
+      })
+    })
+
+    console.log(ui.toString())
+  }
+
+  get report () {
+    let report = { tasks: [] }
+    let monitor = this.TIMER.markers.get('::PRODUCTIONLINE_START::')
+
+    report.start = monitor.start
+    report.end = monitor.end
+    report.duration = monitor.duration
+
+    this.REPORT.forEach(step => report.tasks.push(step))
+
+    report.name = this.name
+    report.version = this.version
+    report.source = this.SOURCE
+    report.output = this.OUTPUT
+    report.assets = this.ASSETS
+    report.ignored = this.IGNOREDLIST
+    report.taskCount = report.tasks.length
+    report.createDate = new Date()
+
+    return report
   }
 
   /**
