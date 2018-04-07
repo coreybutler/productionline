@@ -911,7 +911,7 @@ class Builder extends EventEmitter {
 
     this.tasks.add('Build Report', () => {
       this.TIMER.total = this.timeSince('::PRODUCTIONLINE_START::')
-      this.highlight(`   Process completed in ${this.TIMER.total} seconds.`)
+      this.verysubtle(`\n  Process completed in ${this.TIMER.total} seconds.\n\n`)
     })
 
     this.tasks.run(sequential)
@@ -923,14 +923,12 @@ class Builder extends EventEmitter {
     let width = 15
 
     ui.div({
-      text: chalk.bold(this.COLORS.info(`${report.name} v${report.version} Execution Report`)),
-      width,
-      padding: [0, 0, 0, 5]
+      text: chalk.bold(this.COLORS.info(`${report.name} v${report.version} Execution Report`.toUpperCase())),
+      padding: [2, 0, 0, 5]
     })
 
     ui.div({
-      text: this.COLORS.info(`Ran ${report.taskCount} task${report.taskCount !== 1 ? 's' : ''} for ${report.duration} seconds (from ${report.start.toLocaleTimeString()} to ${report.end.toLocaleTimeString()}).`),
-      width,
+      text: this.COLORS.subtle(`Ran ${report.taskCount} task${report.taskCount !== 1 ? 's' : ''} for ${report.duration} seconds (from ${report.start.toLocaleTimeString()} to ${report.end.toLocaleTimeString()}).`),
       padding: [0, 0, 1, 5]
     })
 
@@ -964,12 +962,12 @@ class Builder extends EventEmitter {
       padding: [1, 0, 1, 5]
     }, {
       text: this.COLORS.subtle(this.IGNOREDLIST.join(', ')),
-      padding: [1, 0, 1, 0]
+      padding: [1, 0, 1, 5]
     })
 
     ui.div({
       text: chalk.bold(this.COLORS.info('Build Tasks:')),
-      width,
+      30,
       padding: [0, 0, 1, 5]
     })
 
@@ -978,16 +976,16 @@ class Builder extends EventEmitter {
 
     report.tasks.forEach(step => {
       ui.div({
-        text: chalk.bold(step.number),
+        text: step.number,
         width: 3,
         align: 'right',
         padding: [1, 0, 1, 5]
       }, {
-        text: chalk.bold(') ' + step.label),
+        text: ') ' + step.label,
         width: 35,
         padding: [1, 0, 1, 0]
       }, {
-        text: this.COLORS.highlight(`Ran for ${this.round(step.duration, sigfigs)} seconds.`),
+        text: this.COLORS.subtle(`Ran for ${this.round(step.duration, sigfigs)} seconds.`),
         width: 30,
         padding: [1, 0, 1, 5]
       })
