@@ -91,6 +91,16 @@ class FileManager {
 
     return snippet.join('\n')
   }
+
+  /**
+   * Similar to Array#forEach, except it passes the line content, line number, and full line object.
+   * @param  {Function} fn
+   */
+  forEachLine (fn) {
+    for (let line = 1; line <= this.lineCount; line++) {
+      fn(this.PRIVATE.lines[line], line, this.PRIVATE.lines)
+    }
+  }
 }
 
 /**
