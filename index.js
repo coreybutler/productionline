@@ -195,33 +195,8 @@ class Builder extends EventEmitter {
     ]
 
     // Find .gitignore and .buildignore. Add them to the ignored list.
-    try {
-      this.IGNOREDLIST = this.IGNOREDLIST.concat(
-        fs.readFileSync(path.join(process.cwd(), '.gitignore')).toString()
-          .replace(/#.*/gi, '')
-          .split(require('os').EOL)
-          .filter(glob => {
-            if (glob.trim().charAt(0) === '!') {
-              return false
-            }
-
-            return glob.trim().length > 0
-          }))
-    } catch (e) {}
-
-    try {
-      this.IGNOREDLIST = this.IGNOREDLIST.concat(
-        fs.readFileSync(path.join(process.cwd(), '.buildignore')).toString()
-          .replace(/#.*/gi, '')
-          .split(require('os').EOL)
-          .filter(glob => {
-            if (glob.trim().charAt(0) === '!') {
-              return false
-            }
-
-            return glob.trim().length > 0
-          }))
-    } catch (e) {}
+    this.ignoreFile(path.join(process.cwd(), '.gitignore'))
+    this.ignoreFile(path.join(process.cwd(), '.buildignore'))
 
     try {
       if (cfg.ignore) {
@@ -531,6 +506,27 @@ class Builder extends EventEmitter {
 
   get File () {
     return FileManager
+  }
+
+  /**
+   * Ignore the contents of the specified file.
+   * This is automatically done for `.buildignore` and `.gitignore`.
+   * @param  {[type]} file [description]
+   * @return {[type]}      [description]
+   */
+  ignoreFile (file) {
+    try {
+      this.IGNOREDLIST = this.IGNOREDLIST.concat(fs.readFileSync(path.resolve(file)).toString()
+        .replace(/#.*/gi, '')
+        .split(require('os').EOL)
+        .filter(glob => {
+          if (glob.trim().charAt(0) === '!') {
+            return false
+          }
+
+          return glob.trim().length > 0
+        }))
+    } catch (e) {}
   }
 
   /**
