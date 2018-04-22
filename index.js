@@ -223,6 +223,16 @@ class Builder extends EventEmitter {
           }))
     } catch (e) {}
 
+    try {
+      if (cfg.ignore) {
+        if (!Array.isArray(cfg.ignore)) {
+          cfg.ignore = [cfg.ignore]
+        }
+
+        this.IGNOREDLIST = this.IGNOREDLIST.concat(cfg.ignore)
+      }
+    } catch (e) {}
+
     // Helper tool for custom logging.
     this.joinArguments = args => {
       let out = []
