@@ -815,7 +815,7 @@ class Builder extends EventEmitter {
    * @param  {Function} callback
    */
   copyToOutput (filepath, callback) {
-    let sourcePath = path.join(this.SOURCE, filepath)
+    let sourcePath = path.join(this.SOURCE, filepath).replace(new RegExp(`(${this.SOURCE}){2,100}`), this.SOURCE)
     let outputPath = this.outputDirectory(sourcePath)
 
     fs.copy(sourcePath, outputPath, callback)
