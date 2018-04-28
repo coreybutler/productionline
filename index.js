@@ -229,6 +229,8 @@ class Builder extends EventEmitter {
         configurable: true,
         value: () => {
           this.tasks.add('Preparing Build', next => {
+            this.notifyOfUpdate()
+
             let ui = new CLITable()
 
             ui.div({
@@ -320,6 +322,13 @@ class Builder extends EventEmitter {
         configurable: false,
         writable: true,
         value: []
+      },
+
+      NOTIFIED_OF_UPDATE: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: false
       },
 
       /**
@@ -506,6 +515,55 @@ class Builder extends EventEmitter {
 
   get File () {
     return FileManager
+  }
+
+  get SemanticVersion () {
+    return require('semver')
+  }
+
+  // Retrieves the latest version number for the specified module.
+  checkLatestModuleVersion (moduleName, callback) {
+    require('child_process').exec(`npm info ${moduleName} --json`, (err, data) => {
+      if (err) {
+        return callback(err)
+      }
+
+      try {
+        callback(null, JSON.parse(data).version)
+      } catch (e) {
+        callback(e)
+      }
+    })
+  }
+
+  // Determines if this is the latest version of the module available.
+  isLatest (callback) {
+    this.checkLatestModuleVersion(this.PKG.name, (err, v) => {
+      if (err) {
+        return callback(err)
+      }
+
+      callback(null, this.SemanticVersion.lte(v, this.version), {
+        current: this.version,
+        latest: v
+      })
+    })
+  }
+
+  notifyOfUpdate () {
+    if (!this.NOTIFIED_OF_UPDATE) {
+      this.isLatest((err, isLatest, versions) => {
+        if (err) {
+          throw err
+        }
+
+        if (isLatest) {
+          this.highlight(`  A new version (${versions.latest}) is available.`)
+        }
+      })
+
+      this.NOTIFIED_OF_UPDATE = true
+    }
   }
 
   /**
