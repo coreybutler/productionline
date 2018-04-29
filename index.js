@@ -112,6 +112,12 @@ class Builder extends EventEmitter {
   constructor (cfg = {}) {
     super()
 
+    /**
+     * @cfg {boolean} [checkForUpdates=true]
+     * Check for updates to the module.
+     */
+    this.CHECKFORUPDATES = typeof cfg.checkForUpdates === 'boolean' ? cfg.checkForUpdates : true
+
     this.tasks = new TaskRunner()
 
     this.PKG = require(path.join(process.cwd(), 'package.json'))
@@ -229,8 +235,6 @@ class Builder extends EventEmitter {
         configurable: true,
         value: () => {
           this.tasks.add('Preparing Build', next => {
-            this.notifyOfUpdate()
-
             let ui = new CLITable()
 
             ui.div({
@@ -272,9 +276,10 @@ class Builder extends EventEmitter {
               padding: [1, 0, 1, 0]
             })
 
-            console.log(ui.toString())
-
-            next()
+            this.checkForUpdate(() => {
+              console.log(ui.toString())
+              next()
+            })
           })
         }
       },
@@ -329,6 +334,13 @@ class Builder extends EventEmitter {
         configurable: false,
         writable: true,
         value: false
+      },
+
+      MODULE_NAME: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: path.basename(__dirname)
       },
 
       /**
@@ -522,7 +534,7 @@ class Builder extends EventEmitter {
   }
 
   // Retrieves the latest version number for the specified module.
-  checkLatestModuleVersion (moduleName, callback) {
+  checkModuleVersion (moduleName, callback) {
     require('child_process').exec(`npm info ${moduleName} --json`, (err, data) => {
       if (err) {
         return callback(err)
@@ -536,33 +548,27 @@ class Builder extends EventEmitter {
     })
   }
 
-  // Determines if this is the latest version of the module available.
-  isLatest (callback) {
-    this.checkLatestModuleVersion(this.PKG.name, (err, v) => {
-      if (err) {
-        return callback(err)
-      }
-
-      callback(null, this.SemanticVersion.lte(v, this.version), {
-        current: this.version,
-        latest: v
-      })
-    })
-  }
-
-  notifyOfUpdate () {
-    if (!this.NOTIFIED_OF_UPDATE) {
-      this.isLatest((err, isLatest, versions) => {
-        if (err) {
-          throw err
-        }
-
-        if (isLatest) {
-          this.highlight(`  A new version (${versions.latest}) is available.`)
-        }
-      })
-
+  checkForUpdate (callback) {
+    if (this.CHECKFORUPDATES && !this.NOTIFIED_OF_UPDATE) {
       this.NOTIFIED_OF_UPDATE = true
+
+      this.checkModuleVersion(this.MODULE_NAME, (err, latestVersion) => {
+        if (!err) {
+          let currentVersion = this.version
+
+          if (this.MODULE_NAME !== this.name) {
+            currentVersion = require(path.join(process.cwd(), 'node_modules', this.MODULE_NAME, 'package.json')).version
+          }
+
+          if (this.SemanticVersion.lt(currentVersion, latestVersion)) {
+            console.log(this.COLORS.warn(`\n  ** An update for ${this.MODULE_NAME} is available (${currentVersion} ==> `) + this.COLORS.success(latestVersion) + this.COLORS.warn(') **\n'))
+          }
+        }
+
+        callback && callback()
+      })
+    } else {
+      callback && callback()
     }
   }
 
