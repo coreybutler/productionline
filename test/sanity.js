@@ -79,6 +79,8 @@ test('Basic Timer', function (t) {
 test('Update Checks', function (t) {
   let builder = new ProductionLine()
 
+  builder.identifyOutdatedModules()
+
   builder.checkModuleVersion('productionline', (err, version) => {
     t.ok(err === null, 'Retrieved version data from npm.')
     t.end()

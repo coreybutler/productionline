@@ -572,6 +572,93 @@ class Builder extends EventEmitter {
     }
   }
 
+  identifyOutdatedModules (type = 'all', callback) {
+    if (this.CHECKFORUPDATES) {
+      let pkgModules = {}
+      let updateTasks = new TaskRunner()
+      let list = []
+
+      if (type === 'all' || type === 'production') {
+        list = Object.keys(this.PKG.dependencies)
+      }
+
+      if (type === 'all' || type === 'development') {
+        list = list.concat(Object.keys(this.PKG.devDependencies))
+      }
+
+      list.forEach(mod => {
+        updateTasks.add(cont => {
+          this.checkModuleVersion(mod, (err, version) => {
+            let currentVersion = require(path.join(process.cwd(), 'node_modules', mod, 'package.json')).version
+
+            if (!err && this.SemanticVersion.lt(currentVersion, version)) {
+              pkgModules[mod] = {
+                current: currentVersion,
+                latest: version
+              }
+            }
+
+            cont()
+          })
+        })
+      })
+
+      updateTasks.on('complete', () => {
+        let mods = Object.keys(pkgModules)
+
+        if (mods.length > 0) {
+          let ui = new this.Table()
+
+          ui.div({
+            text: chalk.bold('Outdated Module'),
+            width: 20,
+            padding: [0, 0, 0, 3]
+          }, {
+            text: chalk.bold('Current'),
+            width: 10,
+            padding: [0, 0, 0, 0],
+            align: 'right'
+          }, {
+            text: '',
+            width: 5,
+            padding: [0, 1, 0, 1]
+          }, {
+            text: chalk.bold('Latest'),
+            width: 10,
+            padding: [0, 0, 0, 0],
+            align: 'left'
+          })
+
+          mods.forEach(mod => {
+            ui.div({
+              text: chalk.bold(this.COLORS.warn(mod)),
+              width: 20,
+              padding: [0, 0, 0, 3]
+            }, {
+              text: chalk.bold(this.COLORS.warn(pkgModules[mod].current)),
+              width: 10,
+              padding: [0, 0, 0, 0],
+              align: 'right'
+            }, {
+              text: this.COLORS.verysubtle('==>'),
+              width: 5,
+              padding: [0, 1, 0, 1]
+            }, {
+              text: chalk.bold(this.COLORS.success(pkgModules[mod].latest)),
+              width: 10,
+              padding: [0, 0, 0, 0],
+              align: 'left'
+            })
+          })
+
+          console.log(ui.toString())
+        }
+      })
+
+      updateTasks.run()
+    }
+  }
+
   /**
    * Ignore the contents of the specified file.
    * This is automatically done for `.buildignore` and `.gitignore`.
