@@ -573,16 +573,16 @@ class Builder extends EventEmitter {
   }
 
   identifyOutdatedModules (type = 'all', callback) {
-    if (this.CHECKFORUPDATES) {
+    if (this.CHECKFORUPDATES && this.PKG) {
       let pkgModules = {}
       let updateTasks = new TaskRunner()
       let list = []
 
-      if (type === 'all' || type === 'production' && this.PKG.hasOwnProperty('dependencies')) {
+      if ((type === 'all' || type === 'production') && this.PKG.hasOwnProperty('dependencies')) {
         list = Object.keys(this.PKG.dependencies)
       }
 
-      if (type === 'all' || type === 'development' && this.PKG.hasOwnProperty('devDependencies')) {
+      if ((type === 'all' || type === 'development') && this.PKG.hasOwnProperty('devDependencies')) {
         list = list.concat(Object.keys(this.PKG.devDependencies))
       }
 
