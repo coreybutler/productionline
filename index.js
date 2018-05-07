@@ -578,11 +578,11 @@ class Builder extends EventEmitter {
       let updateTasks = new TaskRunner()
       let list = []
 
-      if (type === 'all' || type === 'production') {
+      if (type === 'all' || type === 'production' && this.PKG.hasOwnProperty('dependencies')) {
         list = Object.keys(this.PKG.dependencies)
       }
 
-      if (type === 'all' || type === 'development') {
+      if (type === 'all' || type === 'development' && this.PKG.hasOwnProperty('devDependencies')) {
         list = list.concat(Object.keys(this.PKG.devDependencies))
       }
 
