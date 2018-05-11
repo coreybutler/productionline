@@ -49,7 +49,11 @@ class Monitor extends EventEmitter {
   reset () {
     this.BUILDER.tasks.steps = []
     // this.BUILDER.prepareBuild()
-    this.callback && this.callback(...arguments)
+    try {
+      this.callback && this.callback(...arguments)
+    } catch (e) {
+      this.error(e)
+    }
   }
 }
 

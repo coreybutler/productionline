@@ -192,6 +192,10 @@ class Builder extends EventEmitter {
       './assets'
     ]
 
+    if (typeof this.ASSETS === 'string') {
+      this.ASSETS = [this.ASSETS]
+    }
+
     /**
      * @cfg {string} [ignoredList=node_modules]
      * A list of directories to ignore.
@@ -476,7 +480,7 @@ class Builder extends EventEmitter {
   }
 
   set assets (value) {
-    this.ASSETS = value
+    this.ASSETS = typeof value === 'string' ? [value] : value
   }
 
   get assets () {
