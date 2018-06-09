@@ -74,7 +74,7 @@ class FileManager {
       let lineEnd = currentPosition + content.length - (content.length === 0 ? 0 : 1)
 
       this.PRIVATE.lines[line + 1] = content
-      this.PRIVATE.lineIndex.set([currentPosition, lineEnd], line + 1)
+      this.PRIVATE.lineindex.set([currentPosition, lineEnd], line + 1)
 
       currentPosition = lineEnd + 1
     })
