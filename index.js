@@ -106,7 +106,7 @@ class FileManager {
     // Sort index values, then get the line numbers
     Array.from(arguments).sort().reverse().forEach(index => {
       let line = null
-      let ranges = this.PRIVATE.lineIndex.entries()
+      let ranges = this.PRIVATE.lineindex.entries()
       let range
 
       while (line === null && !(range = ranges.next()).done) {
