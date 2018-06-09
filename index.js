@@ -68,15 +68,21 @@ class FileManager {
     this.PRIVATE.lines = {}
 
     let lines = this.content.split(/\r|\n/)
-    let currentPosition = 0
+    let currentPosition = -1
 
     lines.forEach((content, line) => {
-      let lineEnd = currentPosition + content.length - (content.length === 0 ? 0 : 1)
+      currentPosition++
+
+      let lineEnd = currentPosition + content.length - (currentPosition === 0 ? 1 : 0)
+
+      if (lineEnd <= currentPosition) {
+        lineEnd = currentPosition + 1
+      }
 
       this.PRIVATE.lines[line + 1] = content
       this.PRIVATE.lineindex.set([currentPosition, lineEnd], line + 1)
 
-      currentPosition = lineEnd + 1
+      currentPosition = lineEnd
     })
 
     this.PRIVATE.linecount = lines.length
