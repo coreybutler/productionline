@@ -21,7 +21,8 @@ class FileManager {
           content: null,
           lines: null,
           linecount: null,
-          lineindex: new Map()
+          lineindex: new Map(),
+          indexline: new Map()
         }
       }
     })
@@ -81,6 +82,7 @@ class FileManager {
 
       this.PRIVATE.lines[line + 1] = content
       this.PRIVATE.lineindex.set([currentPosition, lineEnd], line + 1)
+      this.PRIVATE.indexline.set(line + 1, [currentPosition, lineEnd])
 
       currentPosition = lineEnd
     })
@@ -100,7 +102,7 @@ class FileManager {
     return this.lines[number]
   }
 
-  // Accepts any number of arguments
+  // Accepts any number of indexes as arguments
   getLineByIndex () {
     let indice = {}
 
@@ -121,6 +123,23 @@ class FileManager {
           indice[index] = line
         }
       }
+    })
+
+    return indice
+  }
+
+  // Accepts any number of lines as arguments
+  getLineIndexRange () {
+    let indice = {}
+
+    // Forcibly calculate lines if they don't exist.
+    if (this.PRIVATE.lines === null) {
+      this.processLines()
+    }
+
+    // Sort index values, then get the line numbers
+    Array.from(arguments).sort().reverse().forEach(line => {
+      indice[line] = this.PRIVATE.indexline.get(line)
     })
 
     return indice
