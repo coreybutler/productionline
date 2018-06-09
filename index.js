@@ -20,7 +20,8 @@ class FileManager {
           filepath,
           content: null,
           lines: null,
-          linecount: null
+          linecount: null,
+          lineindex: new Map()
         }
       }
     })
@@ -45,14 +46,7 @@ class FileManager {
 
   get lines () {
     if (this.PRIVATE.lines === null) {
-      this.PRIVATE.lines = {}
-
-      let lines = this.content.split(/\r|\n/)
-      lines.forEach((content, line) => {
-        this.PRIVATE.lines[line + 1] = content
-      })
-
-      this.PRIVATE.linecount = lines.length
+      this.processLines()
     }
 
     return this.PRIVATE.lines
@@ -70,6 +64,24 @@ class FileManager {
     return path.basename(this.PRIVATE.filepath)
   }
 
+  processLines () {
+    this.PRIVATE.lines = {}
+
+    let lines = this.content.split(/\r|\n/)
+    let currentPosition = 0
+
+    lines.forEach((content, line) => {
+      let lineEnd = currentPosition + content.length - (content.length === 0 ? 0 : 1)
+
+      this.PRIVATE.lines[line + 1] = content
+      this.PRIVATE.lineIndex.set([currentPosition, lineEnd], line + 1)
+
+      currentPosition = lineEnd + 1
+    })
+
+    this.PRIVATE.linecount = lines.length
+  }
+
   readSync () {
     return fs.readFileSync(this.PRIVATE.filepath).toString()
   }
@@ -80,6 +92,32 @@ class FileManager {
 
   getLine (number) {
     return this.lines[number]
+  }
+
+  // Accepts any number of arguments
+  getLineByIndex () {
+    let indice = {}
+
+    // Forcibly calculate lines if they don't exist.
+    if (this.PRIVATE.lines === null) {
+      this.processLines()
+    }
+
+    // Sort index values, then get the line numbers
+    Array.from(arguments).sort().reverse().forEach(index => {
+      let line = null
+      let ranges = this.PRIVATE.lineIndex.entries()
+      let range
+
+      while (line === null && !(range = ranges.next()).done) {
+        if (index >= range.value[0][0] && index <= range.value[0][1]) {
+          line = range.value[1]
+          indice[index] = line
+        }
+      }
+    })
+
+    return indice
   }
 
   getSnippet (start, end) {

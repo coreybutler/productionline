@@ -1,7 +1,7 @@
 'use strict'
 
 const ProductionLine = require('../')
-const test = require('tape')
+const test = require('tap').test
 
 test('Sanity Test', function (t) {
   t.ok(typeof ProductionLine === 'function', 'Builder Class is recognized by Node.')
@@ -16,7 +16,7 @@ test('Basic Build', function (t) {
 
   builder.assets = [] // No assets in the test.
   builder.source = './'
-  console.log(builder.source)
+  // console.log(builder.source)
 
   builder.addTask('Step A', () => ct++)
   builder.addTask('Step B', () => ct++)
