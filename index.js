@@ -81,10 +81,14 @@ class FileManager {
       }
 
       this.PRIVATE.lines[line + 1] = content
-      this.PRIVATE.lineindex.set([currentPosition, lineEnd], line + 1)
-      this.PRIVATE.indexline.set(line + 1, [currentPosition, lineEnd])
 
-      currentPosition = lineEnd
+      let start = this.content.indexOf(content, currentPosition)
+      let end = start + content.length - (currentPosition === 0 ? 1 : 0)
+
+      this.PRIVATE.lineindex.set([start, end], line + 1)
+      this.PRIVATE.indexline.set(line + 1, [start, end])
+
+      currentPosition = end
     })
 
     this.PRIVATE.linecount = lines.length
