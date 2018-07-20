@@ -1,4 +1,4 @@
-# productionline [![Build Status](https://travis-ci.org/coreybutler/productionline.svg?branch=master)](https://travis-ci.org/coreybutler/productionline)
+# productionline [![Build Status](https://travis-ci.org/coreybutler/productionline.svg?branch=master)](https://travis-ci.org/coreybutler/productionline) [![Greenkeeper badge](https://badges.greenkeeper.io/coreybutler/productionline.svg)](https://greenkeeper.io/)
 
 `npm install productionline --save-dev`
 
