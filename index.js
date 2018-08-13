@@ -68,7 +68,7 @@ class FileManager {
   processLines () {
     this.PRIVATE.lines = {}
 
-    let lines = this.content.split(/\r|\n/)
+    let lines = this.content.split(require('os').EOL)
     let currentPosition = -1
 
     lines.forEach((content, line) => {
