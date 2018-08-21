@@ -1202,49 +1202,85 @@ class Builder extends EventEmitter {
       sequential = true
     }
 
-    this.prepareBuild()
+    let queue = new TaskRunner()
 
-    this.startTimer()
+    // Check for internet connection
+    queue.add(cont => {
+      let checkComplete = false
 
-    this.before()
+      require('dns').resolve('npmjs.org', err => {
+        if (checkComplete) {
+          return
+        }
 
-    this.CURRENT_STEP = 0
+        checkComplete = true
 
-    this.tasks.on('stepstarted', step => this.stepStarted(step))
+        if (err) {
+          this.highlight('Could not connect to npmjs.org. Cannot check for updated modules.')
+          this.CHECKFORUPDATES = false
+        }
 
-    this.tasks.on('stepcomplete', step => {
-      if (step.name !== '::EXECUTIONREPORT::') {
-        let label = step.name || `STEP ${step.number}`
-        let timer = this.TIMER.markers.get(label)
-        let duration = timer.duration
+        cont()
+      })
 
-        this.REPORT.push({
-          label,
-          number: step.number,
-          start: timer.start,
-          end: new Date(timer.start.getTime() + (duration * 1000)),
-          duration
-        })
+      setTimeout(() => {
+        if (!checkComplete) {
+          checkComplete = true
+          this.CHECKFORUPDATES = false
 
-        this.emit('step.complete', step)
+          this.highlight('Could not connect to npmjs.org.')
+          cont()
+        }
+      }, 2500)
+    })
+
+    queue.add(cont => {
+      this.prepareBuild()
+
+      this.startTimer()
+
+      this.before()
+
+      this.CURRENT_STEP = 0
+
+      this.tasks.on('stepstarted', step => this.stepStarted(step))
+
+      this.tasks.on('stepcomplete', step => {
+        if (step.name !== '::EXECUTIONREPORT::') {
+          let label = step.name || `STEP ${step.number}`
+          let timer = this.TIMER.markers.get(label)
+          let duration = timer.duration
+
+          this.REPORT.push({
+            label,
+            number: step.number,
+            start: timer.start,
+            end: new Date(timer.start.getTime() + (duration * 1000)),
+            duration
+          })
+
+          this.emit('step.complete', step)
+        }
+      })
+
+      this.tasks.on('complete', () => this.complete(callback))
+
+      // "Before" tasks are applied in the constructor.
+      if (!this.monitoring) {
+        this.cli()
       }
+
+      this.after()
+
+      this.tasks.add('::EXECUTIONREPORT::', () => {
+        this.TIMER.total = this.timeSince('::PRODUCTIONLINE_START::')
+        this.verysubtle(`\n  Process completed in ${this.TIMER.total} seconds.\n\n`)
+      })
+
+      this.tasks.run(sequential)
     })
 
-    this.tasks.on('complete', () => this.complete(callback))
-
-    // "Before" tasks are applied in the constructor.
-    if (!this.monitoring) {
-      this.cli()
-    }
-
-    this.after()
-
-    this.tasks.add('::EXECUTIONREPORT::', () => {
-      this.TIMER.total = this.timeSince('::PRODUCTIONLINE_START::')
-      this.verysubtle(`\n  Process completed in ${this.TIMER.total} seconds.\n\n`)
-    })
-
-    this.tasks.run(sequential)
+    queue.run(true)
   }
 
   displayReport () {
