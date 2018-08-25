@@ -1075,6 +1075,8 @@ class Builder extends EventEmitter {
         }
 
         this.COMMANDS[args[0]].apply(this, args)
+      } else if (this.COMMANDS.hasOwnProperty('default') && typeof this.COMMANDS.default === 'function') {
+        this.COMMANDS.default.apply(this, args)
       }
     }
   }
