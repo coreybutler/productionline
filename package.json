@@ -35,8 +35,8 @@
     "shortbus": "1.2.8"
   },
   "devDependencies": {
-    "snazzy": "7.1.1",
     "standard": "12.0.0",
+    "snazzy": "8.0.0",
     "tap": "^12.0.1"
   }
 }
