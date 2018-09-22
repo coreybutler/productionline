@@ -1410,9 +1410,21 @@ class Builder extends EventEmitter {
       // Intentionally delay the start of the watch so the builder initializes.
       setTimeout(() => {
         this.LOCAL_MONITOR = new Monitor(this, callback)
-        this.emit('watch', this.LOCAL_MONITOR)
-        setTimeout(() => this.verysubtle(`  Monitoring ${this.SOURCE} for changes. Press ctrl+c to exit.\n`), 600)
+        this.LOCAL_MONITOR.on('ready', () => {
+          this.emit('watch', this.LOCAL_MONITOR)
+          this.verysubtle(`  Monitoring ${this.SOURCE} for changes. Press ctrl+c to exit.\n`)
+        })
+
+        this.LOCAL_MONITOR.on('error', e => this.failure(e))
       }, 100)
+    }
+  }
+
+  unwatch (callback) {
+    if (this.LOCAL_MONITOR !== null) {
+      this.LOCAL_MONITOR.stop()
+      this.LOCAL_MONITOR = null
+      this.emit('unwatch')
     }
   }
 

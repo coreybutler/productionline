@@ -2,6 +2,39 @@
 
 const ProductionLine = require('../')
 const test = require('tap').test
+const path = require('path')
+const fs = require('fs')
+
+const tmpSrc = path.join(__dirname, 'tmp_project')
+
+const rmdir = dir => {
+  try {
+    let list = fs.readdirSync(dir)
+
+    for (let i = 0; i < list.length; i++) {
+      let filename = path.join(dir, list[i])
+      let stat = fs.statSync(filename)
+
+      if (!(filename === '.' && filename === '..')) {
+        if (stat.isDirectory()) {
+          rmdir(filename)
+        } else {
+          fs.unlinkSync(filename)
+        }
+      }
+    }
+
+    fs.rmdirSync(dir)
+  } catch (e) {
+    if (e.message.indexOf('no such') < 0) {
+      console.error(e)
+    }
+  }
+}
+
+const exitHandler = () => {
+  rmdir(tmpSrc)
+}
 
 test('Sanity Test', function (t) {
   t.ok(typeof ProductionLine === 'function', 'Builder Class is recognized by Node.')
@@ -85,4 +118,47 @@ test('Update Checks', function (t) {
     t.ok(err === null, 'Retrieved version data from npm.')
     t.end()
   })
+})
+
+test('File Monitoring', function (t) {
+  rmdir(tmpSrc)
+  fs.mkdirSync(tmpSrc)
+
+  let builder = new ProductionLine({ source: tmpSrc })
+
+  fs.mkdirSync(path.join(tmpSrc, 'blah'))
+  let testFile = path.join(tmpSrc, 'blah', 'test.js')
+
+  builder.on('watch', () => {
+    setTimeout(() => fs.writeFileSync(testFile, 'console.log(\'test\')', 'utf8'), 300)
+  })
+
+  builder.watch((action, filename) => {
+    switch (action) {
+      case 'create':
+        t.pass('File creation detected.')
+        fs.appendFileSync(testFile, '\n// more')
+        break
+
+      case 'update':
+        t.pass('File update detected.')
+        fs.unlinkSync(testFile)
+        break
+
+      case 'delete':
+        t.pass('File delete detected.')
+        builder.unwatch()
+        t.end()
+    }
+  })
+})
+
+process.on('exit', exitHandler)
+process.on('SIGINT', exitHandler)
+process.on('SIGUSR1', exitHandler)
+process.on('SIGUSR2', exitHandler)
+process.on('uncaughtException', e => {
+  console.log('Uncaught Exception...')
+  console.log(e.stack)
+  process.exit(99)
 })
