@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/coreybutler/productionline#readme",
   "dependencies": {
-    "chalk": "2.4.1",
+    "chalk": "2.4.2",
     "chokidar": "^2.0.4",
     "cliui": "4.1.0",
     "fs-extra": "7.0.0",
