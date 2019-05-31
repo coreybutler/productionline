@@ -32,27 +32,41 @@ class Monitor extends EventEmitter {
         configurable: false,
         writable: false,
         value: builder
+      },
+
+      WATCHER: {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: null
       }
     })
 
-    let watcher = require('chokidar').watch(path.join(this.BUILDER.SOURCE, '**/*'), {
+    let chokidar = require('chokidar')
+
+    this.WATCHER = chokidar.watch(path.join(this.BUILDER.SOURCE, path.sep), {
       ignored: this.BUILDER.IGNOREDLIST,
-      ignoreInitial: true
-    })
-      .on('add', filepath => this.reset('create', filepath))
+      ignoreInitial: true,
+      persistent: true
+    }).on('add', filepath => this.reset('create', filepath))
       .on('change', filepath => this.reset('update', filepath))
       .on('unlink', filepath => this.reset('delete', filepath))
+      .on('error', error => console.error(error))
+      .on('ready', () => this.emit('ready', this.WATCHER))
+  }
 
-    this.emit('ready', watcher)
+  stop () {
+    this.WATCHER.close()
+    this.emit('close')
   }
 
   reset () {
     this.BUILDER.tasks.steps = []
-    // this.BUILDER.prepareBuild()
+
     try {
       this.callback && this.callback(...arguments)
     } catch (e) {
-      this.error(e)
+      this.emit('error', e)
     }
   }
 }
