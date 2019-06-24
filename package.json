@@ -31,7 +31,7 @@
     "cliui": "4.1.0",
     "fs-extra": "7.0.0",
     "glob": "7.1.2",
-    "semver": "^5.7.0",
+    "semver": "^6.1.2",
     "shortbus": "1.2.8"
   },
   "devDependencies": {
