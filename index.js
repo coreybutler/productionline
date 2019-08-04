@@ -22,7 +22,8 @@ class FileManager {
           lines: null,
           linecount: null,
           lineindex: new Map(),
-          indexline: new Map()
+          indexline: new Map(),
+          stats: new fs.Dirent()
         }
       }
     })
@@ -323,19 +324,23 @@ class Builder extends EventEmitter {
             })
 
             ui.div({
+              text: chalk.bold('Assets:'),
+              width,
+              padding: [0, 0, 0, 5]
+            }, {
+              text: this.ASSETS.map(asset => {
+                return asset.indexOf(path.join(this.SOURCE, '..')) < 0
+                  ? path.join(this.SOURCE, asset)
+                  : asset
+              }).join('--')
+            })
+
+            ui.div({
               text: chalk.bold('Output:'),
               width,
               padding: [0, 0, 0, 5]
             }, {
               text: this.OUTPUT
-            })
-
-            ui.div({
-              text: chalk.bold('Assets:'),
-              width,
-              padding: [0, 0, 0, 5]
-            }, {
-              text: this.ASSETS.map(asset => path.join(this.SOURCE, asset)).join('\n')
             })
 
             ui.div({
@@ -911,7 +916,10 @@ class Builder extends EventEmitter {
    * The corresponding output path.
    */
   outputDirectory (inputFilepath) {
-    if (path.resolve(inputFilepath) !== inputFilepath) {
+    let p = path.parse(inputFilepath)
+    inputFilepath = path.join(p.root, p.dir, p.base)
+
+    if (path.normalize(path.resolve(inputFilepath)) !== path.normalize(inputFilepath)) {
       inputFilepath = path.join(this.OUTPUT, inputFilepath)
     }
 
