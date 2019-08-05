@@ -1,6 +1,6 @@
-workflow "Build, Test, and Publish" {
+workflow "Automatically Tag Commit" {
   on = "push"
-  resolves = ["Master"]
+  resolves = ["Autotag"]
 }
 
 action "Restrict to Master Branch" {
@@ -12,4 +12,10 @@ action "Restrict to Master Branch" {
 action "Master" {
   uses = "actions/bin/filter@master"
   args = "branch master"
+}
+
+action "Autotag" {
+  uses = "author/action-autotag@master"
+  needs = ["Master"]
+  secrets = ["GITHUB_TOKEN"]
 }
