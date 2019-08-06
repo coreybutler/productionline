@@ -32,7 +32,8 @@
     "fs-extra": "^7.0.0",
     "glob": "7.1.2",
     "semver": "^5.7.0",
-    "shortbus": "1.2.8"
+    "shortbus": "1.2.8",
+    "diff": ">=3.5.0"
   },
   "devDependencies": {
     "snazzy": "8.0.0",
