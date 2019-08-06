@@ -2,7 +2,7 @@ workflow "Deploy New Verison" {
   resolves = [
     "Create Release",
     "Slack Notification",
-    "GitHub Action for Slack",
+    "Master",
   ]
   on = "push"
 }
@@ -24,16 +24,16 @@ action "Autotag" {
   secrets = ["GITHUB_TOKEN"]
 }
 
+action "Publish to npm" {
+  uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
+  needs = ["Autotag"]
+  secrets = ["NPM_AUTH_TOKEN"]
+}
+
 action "Create Release" {
   uses = "frankjuniorr/github-create-release-action@master"
   needs = ["Autotag"]
   secrets = ["GITHUB_TOKEN"]
-}
-
-action "Publish to npm" {
-  uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
-  needs = ["Create Release"]
-  secrets = ["NPM_AUTH_TOKEN"]
 }
 
 action "Slack Notification" {
@@ -43,12 +43,5 @@ action "Slack Notification" {
   env = {
     SLACK_OVERRIDE_MESSAGE = ""
   }
-  args = "Update"
-}
-
-action "GitHub Action for Slack" {
-  uses = "Ilshidur/action-slack@e53b10281b03b02b016e1c7e6355200ee4d93d6d"
-  needs = ["Master"]
-  secrets = ["SLACK_WEBHOOK"]
-  args = "{{ GITHUB_ACTION }}"
+  args = ":npm: Published {{ PAYLOAD_EVENT.create.name }}"
 }
