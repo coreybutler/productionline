@@ -1,9 +1,10 @@
-workflow "Automatically Tag Commit" {
-  on = "push"
+workflow "Deploy New Verison" {
   resolves = [
     "Create Release",
     "Slack Notification",
+    "GitHub Action for Slack",
   ]
+  on = "push"
 }
 
 action "Restrict to Master Branch" {
@@ -31,7 +32,7 @@ action "Create Release" {
 
 action "Publish to npm" {
   uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
-  needs = ["Autotag"]
+  needs = ["Create Release"]
   secrets = ["NPM_AUTH_TOKEN"]
 }
 
@@ -43,4 +44,11 @@ action "Slack Notification" {
     SLACK_OVERRIDE_MESSAGE = ""
   }
   args = "Update"
+}
+
+action "GitHub Action for Slack" {
+  uses = "Ilshidur/action-slack@e53b10281b03b02b016e1c7e6355200ee4d93d6d"
+  needs = ["Master"]
+  secrets = ["SLACK_WEBHOOK"]
+  args = "{{ GITHUB_ACTION }}"
 }
