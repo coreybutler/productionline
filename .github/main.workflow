@@ -43,5 +43,5 @@ action "Slack Notification" {
   env = {
     SLACK_OVERRIDE_MESSAGE = ""
   }
-  args = ":npm: Published {{ PAYLOAD_EVENT.create.name }}"
+  args = ":npm: Published {{ EVENT_PAYLOAD.create.name }}"
 }
