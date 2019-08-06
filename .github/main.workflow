@@ -38,9 +38,9 @@ action "Publish to npm" {
 action "Slack Notification" {
   uses = "Ilshidur/action-slack@e53b10281b03b02b016e1c7e6355200ee4d93d6d"
   secrets = ["SLACK_WEBHOOK"]
-  args = "{{ EVENT_PAYLOAD.repository. }}"
   needs = ["Publish to npm"]
   env = {
     SLACK_OVERRIDE_MESSAGE = ""
   }
+  args = "Update"
 }
