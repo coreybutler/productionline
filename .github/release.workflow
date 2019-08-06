@@ -1,6 +1,6 @@
-workflow "New workflow" {
-  on = "create"
+workflow "New Workflow" {
   resolves = ["Create Release"]
+  on = "create"
 }
 
 action "Tags Only" {
