@@ -18,4 +18,4 @@ action "Autotag" {
   uses = "author/action-autotag@master"
   needs = ["Master"]
   secrets = ["GITHUB_TOKEN"]
-}
+  }
