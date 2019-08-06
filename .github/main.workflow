@@ -1,6 +1,9 @@
 workflow "Automatically Tag Commit" {
   on = "push"
-  resolves = ["Autotag"]
+  resolves = [
+    "Create Release",
+    "Publish to npm",
+  ]
 }
 
 action "Restrict to Master Branch" {
@@ -18,4 +21,16 @@ action "Autotag" {
   uses = "author/action-autotag@master"
   needs = ["Master"]
   secrets = ["GITHUB_TOKEN"]
-  }
+}
+
+action "Create Release" {
+  uses = "frankjuniorr/github-create-release-action@master"
+  needs = ["Autotag"]
+  secrets = ["GITHUB_TOKEN"]
+}
+
+action "Publish to npm" {
+  uses = "actions/npm@59b64a598378f31e49cb76f27d6f3312b582f680"
+  needs = ["Autotag"]
+  secrets = ["NPM_AUTH_TOKEN"]
+}
